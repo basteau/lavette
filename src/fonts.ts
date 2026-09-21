@@ -1,13 +1,23 @@
 import assets from "./font-assets.json" with { type: "json" };
 
 export const FONT_PAIRINGS = [
-  { id: "geist", name: "Geist", serif: "Geist Pixel Square", sans: "Geist", displayLeading: 1.25, description: "Pixel-built headlines with the clean, precise Geist interface family." },
-  { id: "studio", name: "Studio", serif: "Fraunces", sans: "DM Sans", displayLeading: 1.25, description: "Soft, expressive headlines with a calm, geometric foundation." },
-  { id: "editorial", name: "Editorial", serif: "Newsreader", sans: "Manrope", displayLeading: 1.25, description: "Literary headlines with crisp, contemporary interface text." },
-  { id: "atelier", name: "Atelier", serif: "Instrument Serif", sans: "Instrument Sans", displayLeading: 1.3, description: "Elegant, high-contrast display type with its versatile sans companion." },
-  { id: "library", name: "Library", serif: "Alegreya", sans: "Alegreya Sans", displayLeading: 1.25, description: "A calligraphic serif and its humanist sans companion, designed together for reading." },
-  { id: "humanist", name: "Humanist", serif: "Source Serif 4", sans: "Source Sans 3", displayLeading: 1.25, description: "Adobe’s complementary serif and sans families for a quietly assured voice." },
+  { id: "geist", sansAdjust: 99.2, displayAdjust: 97, name: "Geist", serif: "Geist Pixel Square", sans: "Geist", displayLeading: 1.25, description: "Pixel-built headlines with the clean, precise Geist interface family." },
+  { id: "studio", sansAdjust: 100, displayAdjust: 100, name: "Studio", serif: "Fraunces", sans: "DM Sans", displayLeading: 1.25, description: "Soft, expressive headlines with a calm, geometric foundation." },
+  { id: "editorial", sansAdjust: 97.4, displayAdjust: 104.5, name: "Editorial", serif: "Newsreader", sans: "Manrope", displayLeading: 1.25, description: "Literary headlines with crisp, contemporary interface text." },
+  { id: "atelier", sansAdjust: 103.1, displayAdjust: 97.2, name: "Atelier", serif: "Instrument Serif", sans: "Instrument Sans", displayLeading: 1.3, description: "Elegant, high-contrast display type with its versatile sans companion." },
+  { id: "library", sansAdjust: 116.4, displayAdjust: 109.9, name: "Library", serif: "Alegreya", sans: "Alegreya Sans", displayLeading: 1.25, description: "A calligraphic serif and its humanist sans companion, designed together for reading." },
+  { id: "humanist", sansAdjust: 110, displayAdjust: 104.5, name: "Humanist", serif: "Source Serif 4", sans: "Source Sans 3", displayLeading: 1.25, description: "Adobe’s complementary serif and sans families for a quietly assured voice." },
 ] as const;
+/** Normalize the font faces, not individual components or Tailwind's size scale.
+ * Sans faces target DM Sans's 0.526em x-height; display faces target Fraunces's
+ * 0.700em cap height. Values come from the bundled fonts' OS/2 metrics and are
+ * rounded to 0.1%. Keep each family's real weight/italic and natural proportions.
+ * https://www.w3.org/TR/css-fonts-5/#descdef-font-face-size-adjust
+ */
+export function fontSizeAdjust(family: string): number {
+  const pair = FONT_PAIRINGS.find(pair => pair.sans === family || pair.serif === family);
+  return pair ? pair.sans === family ? pair.sansAdjust : pair.displayAdjust : 100;
+}
 export const DEFAULT_FONT_PAIRING = "studio";
 export function fontPairing(id: unknown) {
   return FONT_PAIRINGS.find(pair => pair.id === id) ?? FONT_PAIRINGS.find(pair => pair.id === DEFAULT_FONT_PAIRING)!;
@@ -33,10 +43,12 @@ function renderFontFaces(selected: ReturnType<typeof fontAssets>): string {
   font-weight: ${asset.weight};
   font-style: ${asset.style};
   font-display: swap;
+  size-adjust: ${fontSizeAdjust(asset.family)}%;
 }`).join("\n\n");
 }
 
-/** Display-only opt-in. Body/controls retain their native typography defaults.
+/** Display-only opt-in. Body/controls retain their native size and spacing scale; font-face size-adjust
+ * normalizes the perceived size of each pairing.
  * Most pairs use Tailwind's leading-tight value. Instrument Serif's tall accents
  * need additional room. Tracking stays normal; optical spacing remains automatic.
  */

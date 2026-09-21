@@ -1,8 +1,78 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Typography comparison</title><style>
-*{box-sizing:border-box}body{margin:24px;background:#faf9f5;color:#242422;font:16px/1.5 system-ui}main{max-width:1100px;margin:auto}.pair{border-top:1px solid #bbb;padding:20px 0}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:32px}.sample{font:400 clamp(28px,4vw,48px)/var(--leading) var(--display);letter-spacing:normal;margin:12px 0}body{font-synthesis:none}.before{--leading:1.1;letter-spacing:-.035em}.body{font:400 16px/1.5 var(--sans);max-width:65ch}.spacing .sample,.spacing .body{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important}.spacing p{margin-bottom:2em}button{font:inherit;padding:8px 16px}@media(max-width:600px){.comparison{grid-template-columns:1fr}}
-</style><main><h1>Display typography comparison</h1><p>Previous spacing alongside the selected setting. Accented Latin copy, regular display weight, native body spacing.</p><button id="spacing" aria-pressed="false">Test user text spacing</button><div id="pairs"></div></main><script type="module">
-import {FONT_PAIRINGS,fontFaces} from '/src/fonts.ts';
-const style=document.createElement('style');style.textContent=FONT_PAIRINGS.map(p=>fontFaces(p.id)).join('\n');document.head.append(style);
-document.querySelector('#pairs').innerHTML=FONT_PAIRINGS.map(p=>`<section class="pair" style="--display:'${p.serif}';--sans:'${p.sans}';--leading:${p.displayLeading}"><h2>${p.name}: ${p.serif} + ${p.sans}</h2><div class="comparison"><div><strong>Before · 1.1 / −0.035em</strong><p class="sample before">A little colour.<br>A lot of feeling.<br>Élévation & Ångström</p></div><div><strong>Selected · ${p.displayLeading} / normal</strong><p class="sample">A little colour.<br>A lot of feeling.<br>Élévation & Ångström</p></div></div><p class="sample"><em>Élévation, Ångström & quiet details.</em></p><p class="body">A considered interface gives every word room. Crème brûlée, özgürlük, and the quiet details. <strong>Clear emphasis</strong> and a comfortable rhythm for reading. ${p.sans === "Manrope" ? "Manrope supplies no italic; use weight for emphasis." : "<em>True italic: a thoughtful detail.</em>"}</p></section>`).join('');
-document.querySelector('#spacing').onclick=e=>{const active=document.body.classList.toggle('spacing');e.currentTarget.setAttribute('aria-pressed',String(active))};
-</script></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Font pairing size comparison</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 24px; background: #faf9f5; color: #242422; font: 16px/1.5 system-ui; font-synthesis: none; }
+    main { max-width: 1100px; margin: auto; }
+    h1 { font-size: 28px; line-height: 1.3; }
+    h2 { font-size: 20px; }
+    h3 { margin: 0; font: 600 14px/1.5 system-ui; }
+    .pair { border-top: 1px solid #96968e; margin-top: 28px; padding-top: 12px; }
+    .comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+    .column { min-width: 0; font-family: var(--sans); }
+    .heading { font: 400 36px/var(--leading) var(--display); letter-spacing: normal; margin: 16px 0; overflow-wrap: anywhere; }
+    .body { font-size: 16px; line-height: 1.5; }
+    .small { font-size: 14px; line-height: 1.5; }
+    .controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin: 16px 0; font-size: 14px; }
+    label { display: grid; gap: 4px; max-width: 100%; }
+    input, button { font: inherit; line-height: 1.5; padding: 8px 12px; border: 1px solid #696961; border-radius: 4px; color: inherit; background: transparent; }
+    input { width: 190px; max-width: 100%; }
+    button { cursor: pointer; }
+    button:hover { background: #e8e8df; }
+    :focus-visible { outline: 3px solid #235bd1; outline-offset: 3px; }
+    .spacing .column, .spacing .column * { line-height: 1.5 !important; letter-spacing: .12em !important; word-spacing: .16em !important; }
+    .spacing .column p { margin-bottom: 2em; }
+    @media (max-width: 650px) { body { margin: 16px; } .comparison { grid-template-columns: 1fr; gap: 24px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Font pairing size comparison</h1>
+    <p>Original and normalized faces at identical CSS sizes: 36px headings, 16px body, and 14px supporting text and controls. Normalization aligns body x-height and display cap height while preserving each family’s proportions.</p>
+    <button id="spacing" type="button" aria-pressed="false">Test user text spacing</button>
+    <div id="pairs"></div>
+  </main>
+  <script type="module">
+    import { FONT_PAIRINGS, allFontFaces } from '/src/fonts.ts';
+
+    const normalized = allFontFaces();
+    const original = normalized
+      .replace(/font-family: "([^"]+)"/g, 'font-family: "Original $1"')
+      .replace(/size-adjust: [\d.]+%/g, 'size-adjust: 100%');
+    const style = document.createElement('style');
+    style.textContent = normalized + '\n' + original;
+    document.head.append(style);
+
+    function sample(pair, adjusted) {
+      const prefix = adjusted ? '' : 'Original ';
+      const id = `${pair.id}-${adjusted ? 'normalized' : 'original'}`;
+      return `<div class="column" style="--display:'${prefix}${pair.serif}';--sans:'${prefix}${pair.sans}';--leading:${pair.displayLeading}">
+        <h3>${adjusted ? `Normalized · body ${pair.sansAdjust}% / display ${pair.displayAdjust}%` : 'Original · 100%'}</h3>
+        <p class="heading">A little colour.<br>A lot of feeling.<br>Élévation & Ångström</p>
+        <p class="body">A considered interface gives every word room. Crème brûlée, özgürlük, and the quiet details. <strong>Clear emphasis</strong> and a comfortable rhythm for reading.</p>
+        <p class="small">Supporting text: last saved at 10:42. ${pair.sans === 'Manrope' ? 'Manrope uses weight for emphasis.' : '<em>A thoughtful detail, in true italic.</em>'}</p>
+        <div class="controls"><label for="${id}">Project name<input id="${id}" value="Élévation Studio"></label><button type="button">Save changes</button></div>
+      </div>`;
+    }
+
+    document.querySelector('#pairs').innerHTML = FONT_PAIRINGS.map(pair => `
+      <section class="pair" id="${pair.id}">
+        <h2>${pair.name}: ${pair.serif} + ${pair.sans}</h2>
+        <div class="comparison">${sample(pair, false)}${sample(pair, true)}</div>
+      </section>`).join('');
+    document.querySelector('#spacing').addEventListener('click', event => {
+      const active = document.body.classList.toggle('spacing');
+      event.currentTarget.setAttribute('aria-pressed', String(active));
+    });
+    await Promise.all(FONT_PAIRINGS.flatMap(pair => [pair.sans, pair.serif].flatMap(family => [
+      document.fonts.load(`16px "${family}"`),
+      document.fonts.load(`16px "Original ${family}"`),
+    ])));
+    document.documentElement.dataset.fontsReady = 'true';
+  </script>
+</body>
+</html>
