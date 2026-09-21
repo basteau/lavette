@@ -1,5 +1,8 @@
 packages:
   - tests/fixtures/nuxt-ui
+# Remove when fontless upgrades esbuild past GHSA-g7r4-m6w7-qqqr.
+overrides:
+  'fontless@0.2.1>esbuild': 0.28.2
 allowBuilds:
   esbuild: true
   vue-demi: true
