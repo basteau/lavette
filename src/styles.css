@@ -901,3 +901,27 @@ p {
     gap: 24px;
   }
 }
+
+/* Equivalent status examples stay together at every preview width. */
+.semantic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--ui-border-muted);
+  border-radius: calc(var(--ui-radius) * 2);
+  overflow: hidden;
+}
+.semantic-example {
+  min-width: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.semantic-example:nth-child(even) { border-left: 1px solid var(--ui-border-muted); }
+.semantic-example:nth-child(n + 3) { border-top: 1px solid var(--ui-border-muted); }
+@media (max-width: 700px) {
+  .semantic-grid { grid-template-columns: minmax(0, 1fr); }
+  .semantic-example { padding: 20px; }
+  .semantic-example:nth-child(even) { border-left: 0; }
+  .semantic-example + .semantic-example { border-top: 1px solid var(--ui-border-muted); }
+}

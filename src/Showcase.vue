@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import SemanticOverview from "./SemanticOverview.vue";
+import ServiceScenario from "./ServiceScenario.vue";
+import { useToast } from "@nuxt/ui/composables/useToast";
 import type { Palette } from "./palette";
 import { THEME_ROLES, SHADES } from "./theme";
 import { fontPairing } from "./fonts";
@@ -14,6 +17,7 @@ const variants = [
   "ghost",
   "link",
 ] as const;
+const feedbackVariant = ref<"soft" | "subtle" | "outline" | "solid">("soft");
 const sizes = ["xs", "sm", "md", "lg", "xl"] as const;
 const check = ref(true),
   notifications = ref(true),
@@ -30,6 +34,7 @@ const form = reactive({
   role: "Designer",
   bio: "Making thoughtful things for the everyday.",
 });
+const toast = useToast();
 const submitted = ref(false),
   formMessage = ref("");
 const validate = (state: typeof form) => [
@@ -40,9 +45,11 @@ const validate = (state: typeof form) => [
     ? [{ name: "email", message: "Enter a valid email address." }]
     : []),
 ];
+watch(form, () => { submitted.value = false; });
 function submit() {
   submitted.value = true;
   formMessage.value = "Profile saved. Your example changes are ready.";
+  toast.add({ id: "profile-saved", color: "success", title: "Profile saved", icon: "i-lucide-circle-check", duration: 8000 });
 }
 const activity = ref("");
 const rows = [
@@ -51,7 +58,7 @@ const rows = [
     owner: "Alex Morgan",
     initials: "AM",
     status: "In progress",
-    color: "primary",
+    color: "info",
     date: "Jun 24",
     progress: 72,
   },
@@ -77,8 +84,8 @@ const rows = [
     name: "Website direction",
     owner: "Riley Park",
     initials: "RP",
-    status: "In progress",
-    color: "primary",
+    status: "Blocked",
+    color: "error",
     date: "Jul 02",
     progress: 38,
   },
@@ -196,6 +203,7 @@ const passes = computed(() =>
         >{{ role }}</UBadge
       >
     </div>
+    <SemanticOverview />
   </section>
   <section id="typography" class="specimen-section">
     <div class="section-heading">
@@ -267,10 +275,17 @@ const passes = computed(() =>
             :key="variant"
             :color="role"
             :variant="variant"
+            :aria-label="`${role} ${variant} action`"
             @click="activity = `${role} ${variant} button pressed.`"
             >{{ variant }}</UButton
           >
         </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 mt-5">
+        <UButton color="success" disabled>Already saved</UButton>
+        <UButton color="info" loading>Uploading</UButton>
+        <UButton color="warning" variant="soft" disabled>Review unavailable</UButton>
+        <UButton color="error" loading>Retrying</UButton>
       </div>
       <USeparator class="my-6" />
       <div class="flex flex-wrap items-center gap-3">
@@ -396,28 +411,36 @@ const passes = computed(() =>
             <h3>A little feedback</h3>
             <code>UAlert · UProgress</code>
           </div>
+          <UFormField label="Feedback style" class="mb-4">
+            <USelect v-model="feedbackVariant" :items="[
+              { label: 'Soft · tinted', value: 'soft' },
+              { label: 'Subtle · tinted with border', value: 'subtle' },
+              { label: 'Outline · border only', value: 'outline' },
+              { label: 'Solid · filled', value: 'solid' },
+            ]" class="w-full" />
+          </UFormField>
           <div class="space-y-3">
             <UAlert
               color="success"
-              variant="soft"
+              :variant="feedbackVariant"
               icon="i-lucide-circle-check"
               title="Everything is in sync"
               description="Your latest changes are saved."
             /><UAlert
               color="info"
-              variant="subtle"
+              :variant="feedbackVariant"
               icon="i-lucide-info"
               title="A fresh perspective"
               description="Switch to dark mode to see another side of your theme."
             /><UAlert
               color="warning"
-              variant="soft"
+              :variant="feedbackVariant"
               icon="i-lucide-triangle-alert"
               title="A little attention needed"
               description="Your trial ends in three days."
             /><UAlert
               color="error"
-              variant="subtle"
+              :variant="feedbackVariant"
               icon="i-lucide-circle-alert"
               title="That didn’t go through"
               description="Check your connection and try again."
@@ -568,7 +591,7 @@ const passes = computed(() =>
           }}</UBadge></template
         ><template #progress-cell="{ row }"
           ><div class="flex items-center gap-3 min-w-28">
-            <UProgress :model-value="row.original.progress" size="xs" /><span
+            <UProgress :model-value="row.original.progress" :color="row.original.color" size="xs" /><span
               class="text-xs font-mono"
               >{{ row.original.progress }}%</span
             >
@@ -588,6 +611,7 @@ const passes = computed(() =>
           size="xs"
         /></div
     ></UCard>
+    <ServiceScenario />
     <div class="two-column mt-6">
       <UCard class="membership"
         ><UBadge variant="subtle">THE STUDIO PLAN</UBadge>
@@ -717,6 +741,10 @@ const passes = computed(() =>
                 'primary solid label + hover',
                 'Body text / surfaces',
                 'Accented control border / surfaces',
+                'Muted border / surfaces',
+                'Standard border / surfaces',
+                'success soft + hover',
+                'warning solid label + hover',
               ].includes(c.label),
             )"
             :key="c.label"
