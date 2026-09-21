@@ -1,102 +1,58 @@
 # Lavette
 
-A browser-based OKLCH theme studio for Nuxt UI 4 and Tailwind CSS 4, built with
-Vue and Vite. Explore colors, font pairings, and live components; save themes
-locally and export their CSS. No backend.
+Lavette is a browser-based OKLCH theme studio for Nuxt UI 4 and Tailwind CSS 4.
+Adjust colors and font pairings, preview real components in light and dark mode,
+and export a theme for your app. Saved themes stay in your browser's local
+storage. There is no backend.
 
-## Development
+The studio uses Vue and Vite. It does not require a Nuxt app to run.
 
-Use Node.js 22.12+ and pnpm (the version is pinned in `package.json`).
+## Run locally
+
+Use Node.js 22.12 or later and the pnpm version pinned in `package.json`.
+From the repository root, run:
 
 ```sh
 pnpm install
 pnpm dev
+```
+
+Open the local URL printed by Vite. Use **Save** to keep a theme in this browser
+or **Export theme** to download its CSS, size configuration, and font files.
+
+## Use your theme
+
+Follow [Use an exported theme](docs/use-a-theme.md) to add the export to an
+existing Nuxt UI app. The guide covers CSS import order, fonts, control sizes,
+and dark mode.
+
+See the [theme reference](docs/theme-reference.md) for palette controls, status
+colors, contrast targets, and font sizing.
+
+## Check changes
+
+Run the tests and production build from the repository root:
+
+```sh
 pnpm test
 pnpm build
 ```
 
-The build includes type checking and produces `dist/` for static hosting.
-
-## Use a theme
-
-Export the CSS and selected fonts from the studio. Copy the fonts and their OFL
-licenses into your app's `public/fonts/`, then import the theme:
-
-```css
-@import "tailwindcss";
-@import "@nuxt/ui";
-@import "./lavette-theme.css";
-```
-
-Toggle `.dark` on the root element for dark mode. Adjust the exported `/fonts/`
-URLs if your app uses a different asset base.
-
-The export includes semantic utility treatments as well as tokens. Keep the
-complete stylesheet: success, info, warning, and error use separate text, fill,
-hover, tint, and indicator colors. Their 600–950 shades are individually fitted
-to sRGB; primary, secondary, and neutral retain the original mixed ramps.
-
-`--ui-success` (and the other status aliases) is the text/fallback color.
-`--ui-success-fill`, `--ui-success-on-fill`, `--ui-success-hover`,
-`--ui-success-tint`, and `--ui-success-indicator` describe the other uses.
-Nuxt UI's `bg-success text-inverted` combination receives the labelled fill;
-plain `bg-success` receives the indicator color. The same applies to the other
-statuses. In light mode, warning uses bright amber with a dark label (at least
-7:1 in normal and hover states), and darker gold for small indicators.
-
-The included unlayered CSS adapts Nuxt UI 4's solid, soft/subtle, and link
-utility classes, including enabled hover/active states and semantic focus
-outlines. It requires no component configuration. Custom components should use
-the corresponding tokens and verify their actual foreground/background pairs;
-unlisted opacity or state utilities retain Tailwind's normal behavior.
-
-Light-mode muted and standard borders have visibility floors of 1.5:1 and
-1.9:1 against the four ordinary generated surfaces. These are decorative
-separator targets, not control-boundary accessibility claims. Use
-`border-accented` for a control-identifying boundary (checked at 3:1).
-
-## Font sizing
-
-All pairings share the same CSS font-size scale and component spacing. A single
-`size-adjust` value per family in `src/fonts.ts` normalizes the bundled font faces:
-body families match DM Sans's x-height and display families match Fraunces's cap
-height. This lifts Alegreya Sans by 16.4% and Alegreya by 9.9%, without special
-component rules. The adjustment applies to every supplied weight and italic,
-and is included in exported `@font-face` declarations. Geist Mono stays unchanged.
-The typography fixture compares original and normalized faces at identical CSS
-sizes, including controls and small text.
-
-## Palette controls and default size
-
-Color character links the existing mood and depth parameters: quiet colors are
-lighter and restrained; expressive colors are deeper and more intense. Paper
-warmth changes the canvas/neutral tint independently. Gamut and contrast checks
-remain automatic. Old saved themes retain their exact independent mood/depth
-values until the character slider is moved; its initial position is their average.
-
-Small, Medium, and Large use Nuxt UI's native default size variants for supported
-controls. Padding, icons, and control text follow the library's size definitions;
-body/display typography and explicitly sized specimens stay stable. The font-face
-normalization above applies in every size.
-
-Size is configuration, not a CSS token. In the export dialog, choose Nuxt or
-Vue/Vite and copy/download the companion configuration as well as the CSS. Merge
-it into `app.config.ts` (Nuxt) or the `ui` option of `@nuxt/ui/vite`. This follows
-[Nuxt UI's official theme editor](https://github.com/nuxt/ui/blob/v4/docs/app/utils/theme/engine/serialize.ts).
-
-## Compatibility checks
+The build generates Nuxt UI types, checks TypeScript, and writes the static site
+to `dist/`. To inspect that build locally, run:
 
 ```sh
-pnpm --filter lavette-nuxt-ui-compatibility build
-pnpm --filter lavette-nuxt-ui-compatibility dev
+pnpm preview
 ```
 
-The fixture checks exported CSS against real Nuxt UI components. With the main
-dev server running, `/tests/fixtures/typography/` provides a font comparison.
+For changes to theme generation, also run the
+[Nuxt UI compatibility checks](tests/fixtures/nuxt-ui/README.md). With the main
+dev server running, open `/tests/fixtures/typography/` to compare fonts before
+and after size normalization.
 
 ## License
 
 Lavette is [MIT licensed](LICENSE). Bundled fonts retain their SIL Open Font
 Licenses in `public/fonts/`. Third-party skill attribution and license notices
 are preserved in [.agents/skills/SOURCES.md](.agents/skills/SOURCES.md) and its
-linked notices; those materials retain their respective licenses.
+linked notices. Those materials retain their respective licenses.
