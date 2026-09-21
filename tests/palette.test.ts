@@ -41,6 +41,7 @@ describe("palette engine", () => {
         radius: 0.125,
         focusOffset: 0,
         fontPairing: "studio",
+        uiSize: "md",
       },
     );
   });
@@ -51,6 +52,7 @@ describe("palette engine", () => {
       const values = randomValues();
       assert.deepEqual(normalize(values), values);
       assert.ok(values.hue >= 0 && values.hue <= 359);
+      assert.equal(values.mood, values.depth, "new themes use one character setting");
       signatures.add(JSON.stringify(values));
     }
     assert.ok(signatures.size > 1);

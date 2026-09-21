@@ -1,3 +1,4 @@
+import { normalizeUiSize, type UiSize } from "./sizing";
 import { DEFAULT_FONT_PAIRING, fontPairing } from "./fonts";
 import { generateTheme, exportThemeCSS, type Theme } from "./theme";
 import { converter, wcagContrast, type Oklch } from "culori";
@@ -11,6 +12,7 @@ export interface PaletteValues {
   radius: number;
   focusOffset: number;
   fontPairing: string;
+  uiSize: UiSize;
 }
 
 export type PaletteRole = "canvas" | "ink" | "accent" | "support";
@@ -51,6 +53,7 @@ export function normalize(input: unknown = {}): PaletteValues {
       : {};
   return {
     fontPairing: fontPairing(values.fontPairing).id,
+    uiSize: normalizeUiSize(values.uiSize),
     recipe: values.recipe === "tonal" ? "tonal" : "soft",
     hue: wrap(Math.round(wrap(finite(values.hue, 0)) * 1000) / 1000),
     mood: clamp(finite(values.mood, 50), 0, 100),
@@ -205,14 +208,16 @@ export function exportCSS(palette: Palette): string {
 }
 
 export function randomValues(): PaletteValues {
+  const character = Math.round(Math.random() * 100);
   return {
     recipe: Math.random() < 0.5 ? "tonal" : "soft",
     hue: Math.floor(Math.random() * 360),
-    mood: Math.round(Math.random() * 100),
-    depth: Math.round(Math.random() * 100),
+    mood: character,
+    depth: character,
     paperWarmth: Math.round(Math.random() * 100),
     radius: 0.125,
     focusOffset: 0,
     fontPairing: DEFAULT_FONT_PAIRING,
+    uiSize: "md",
   };
 }

@@ -10,6 +10,7 @@ import {
 } from "./palette";
 import { themeStyles, corePaletteColors, focusStyles } from "./theme";
 import { loadFontPairing, FONT_PAIRINGS, fontPairing, fontAssets } from "./fonts";
+import { UI_SIZE_OPTIONS, uiSizeProps, exportSizeConfig } from "./sizing";
 import Showcase from "./Showcase.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 const values = ref(randomValues());
@@ -19,6 +20,9 @@ const dark = ref(false);
 const settings = ref(false);
 const collection = ref(false);
 const exportOpen = ref(false);
+const exportTarget = ref<"nuxt" | "vue">("nuxt");
+const sizeDefaults = computed(() => uiSizeProps(values.value.uiSize));
+const sizeConfig = computed(() => exportSizeConfig(values.value.uiSize, exportTarget.value));
 const toast = useToast();
 function notify(title: string, duration = 5000) {
   toast.add({ id: "studio-notice", title, duration });
@@ -72,14 +76,24 @@ const isSaved = computed(() =>
 );
 const sliders = [
   { key: "hue", label: "Hue", max: 359, step: 1 },
-  { key: "mood", label: "Mood", max: 100, step: 1 },
-  { key: "depth", label: "Depth", max: 100, step: 1 },
+  { key: "mood", label: "Color character", max: 100, step: 1 },
   { key: "paperWarmth", label: "Paper warmth", max: 100, step: 1 },
   { key: "focusOffset", label: "Focus offset", max: 4, step: 1 },
   { key: "radius", label: "Corner radius", max: 0.5, step: 0.025 },
 ] as const;
+type SliderKey = typeof sliders[number]["key"];
+function sliderValue(key: SliderKey): number {
+  // Old saved themes may have independently tuned mood/depth. Keep their colors
+  // intact until the user changes character, then move both dimensions together.
+  return key === "mood" ? Math.round((values.value.mood + values.value.depth) / 2) : values.value[key];
+}
+function setSliderValue(key: SliderKey, value: number | number[] | undefined) {
+  if (typeof value !== "number") return;
+  if (key === "mood") values.value = { ...values.value, mood: value, depth: value };
+  else values.value[key] = value;
+}
 function shuffle() {
-  values.value = { ...randomValues(), fontPairing: values.value.fontPairing, focusOffset: values.value.focusOffset };
+  values.value = { ...randomValues(), fontPairing: values.value.fontPairing, focusOffset: values.value.focusOffset, uiSize: values.value.uiSize };
 }
 function persist() {
   try {
@@ -123,18 +137,22 @@ async function copy(text: string) {
     manualCopy.value = text;
   }
 }
-function download() {
+function downloadFile(content: string, filename: string, type = "text/plain") {
   const url = URL.createObjectURL(
-    new Blob([exportCSS(palette.value)], { type: "text/css" }),
+    new Blob([content], { type }),
   );
   const a = document.createElement("a");
   a.href = url;
-  a.download = "lavette-theme.css";
+  a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function download() {
+  downloadFile(exportCSS(palette.value), "lavette-theme.css", "text/css");
+}
 </script>
 <template>
+  <UTheme :props="sizeDefaults">
   <UApp>
     <a href="#main" class="skip-link">Skip to showcase</a>
     <header class="site-header">
@@ -195,22 +213,30 @@ function download() {
               "
               class="w-full"
           /></UFormField>
+          <UFormField label="Default control size" description="Native control sizing; reading text stays stable.">
+            <USelect v-model="values.uiSize" :items="UI_SIZE_OPTIONS" class="w-full" />
+          </UFormField>
           <div v-for="s in sliders" :key="s.key" class="slider-field">
             <div class="flex justify-between text-sm">
               <label :id="`label-${s.key}`">{{ s.label }}</label
               ><span class="font-mono text-xs text-muted"
-                >{{ values[s.key]
+                >{{ sliderValue(s.key)
                 }}{{
                   s.key === "hue" ? "°" : s.key === "radius" ? "rem" : s.key === "focusOffset" ? "px" : ""
                 }}</span
               >
             </div>
             <USlider
-              v-model="values[s.key]"
+              :model-value="sliderValue(s.key)"
+              @update:model-value="setSliderValue(s.key, $event)"
               :aria-labelledby="`label-${s.key}`"
               :max="s.max"
               :step="s.step"
             />
+            <div v-if="s.key === 'mood' || s.key === 'paperWarmth'" class="flex justify-between text-xs text-muted">
+              <span>{{ s.key === 'mood' ? 'Quiet' : 'Neutral' }}</span>
+              <span>{{ s.key === 'mood' ? 'Expressive' : 'Warm' }}</span>
+            </div>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
@@ -364,15 +390,23 @@ function download() {
               "
               class="w-full"
           /></UFormField>
+          <UFormField label="Default control size" description="Native control sizing; reading text stays stable.">
+            <USelect v-model="values.uiSize" :items="UI_SIZE_OPTIONS" class="w-full" />
+          </UFormField>
           <div v-for="s in sliders" :key="s.key" class="space-y-3">
             <label :id="`mobile-${s.key}`" class="flex justify-between"
-              >{{ s.label }}<code>{{ values[s.key] }}{{ s.key === "focusOffset" ? "px" : s.key === "radius" ? "rem" : s.key === "hue" ? "°" : "" }}</code></label
+              >{{ s.label }}<code>{{ sliderValue(s.key) }}{{ s.key === "focusOffset" ? "px" : s.key === "radius" ? "rem" : s.key === "hue" ? "°" : "" }}</code></label
             ><USlider
-              v-model="values[s.key]"
+              :model-value="sliderValue(s.key)"
+              @update:model-value="setSliderValue(s.key, $event)"
               :aria-labelledby="`mobile-${s.key}`"
               :max="s.max"
               :step="s.step"
             />
+            <div v-if="s.key === 'mood' || s.key === 'paperWarmth'" class="flex justify-between text-xs text-muted">
+              <span>{{ s.key === 'mood' ? 'Quiet' : 'Neutral' }}</span>
+              <span>{{ s.key === 'mood' ? 'Expressive' : 'Warm' }}</span>
+            </div>
           </div></div></template
     ></UModal>
     <UModal
@@ -449,6 +483,20 @@ function download() {
             >
           </div>
           <USeparator />
+          <h3 class="font-medium">Default control size · {{ values.uiSize.toUpperCase() }}</h3>
+          <p class="text-sm text-muted">The stylesheet contains colors and typography. Merge this configuration to apply your default control size; explicit component sizes still take priority.</p>
+          <UFormField label="Project framework">
+            <USelect v-model="exportTarget" :items="[{ label: 'Nuxt', value: 'nuxt' }, { label: 'Vue / Vite', value: 'vue' }]" />
+          </UFormField>
+          <details>
+            <summary class="text-sm cursor-pointer">View size configuration</summary>
+            <pre class="code-block mt-3 max-h-64 overflow-auto">{{ sizeConfig }}</pre>
+          </details>
+          <div class="flex flex-wrap gap-3">
+            <UButton icon="i-lucide-download" @click="downloadFile(sizeConfig, 'lavette-ui.config.ts')">Download config</UButton>
+            <UButton icon="i-lucide-copy" variant="outline" @click="copy(sizeConfig)">Copy config</UButton>
+          </div>
+          <USeparator />
           <h3 class="font-medium">{{ pair.name }} font files</h3>
           <p class="text-sm text-muted">
             Copy these files and their licenses into public/fonts.
@@ -502,4 +550,5 @@ function download() {
           aria-label="Text to copy" /></template
     ></UModal>
   </UApp>
+  </UTheme>
 </template>
