@@ -48,6 +48,5 @@ pnpm preview
 ## License
 
 Lavette is [MIT licensed](LICENSE). Bundled fonts retain their SIL Open Font
-Licenses in `public/fonts/`. Third-party skill attribution and license notices
-are preserved in [.agents/skills/SOURCES.md](.agents/skills/SOURCES.md) and its
-linked notices. Those materials retain their respective licenses.
+Licenses in `public/fonts/`. The bundled UI skill retains its
+[third-party license notices](.agents/skills/better-ui/LICENSE.txt).

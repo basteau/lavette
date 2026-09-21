@@ -1,0 +1,5 @@
+interface:
+  display_name: "Better UI"
+  short_description: "Create and refine beautifully crafted interfaces"
+policy:
+  allow_implicit_invocation: true
