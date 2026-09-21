@@ -93,3 +93,10 @@ pnpm --filter lavette-nuxt-ui-compatibility dev
 
 The fixture checks exported CSS against real Nuxt UI components. With the main
 dev server running, `/tests/fixtures/typography/` provides a font comparison.
+
+## License
+
+Lavette is [MIT licensed](LICENSE). Bundled fonts retain their SIL Open Font
+Licenses in `public/fonts/`. Third-party skill attribution and license notices
+are preserved in [.agents/skills/SOURCES.md](.agents/skills/SOURCES.md) and its
+linked notices; those materials retain their respective licenses.
