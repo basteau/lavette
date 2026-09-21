@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.pnpm-store/
+.nuxt/
+.output/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+
+auto-imports.d.ts
+components.d.ts
+
+# pnpm is the only package manager.
+package-lock.json
+npm-shrinkwrap.json
+yarn.lock
+bun.lock
+bun.lockb

@@ -1,0 +1,34 @@
+{
+  "name": "lavette",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "build": "vite build && pnpm typecheck",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@nuxt/ui": "4.11.1",
+    "culori": "^4.0.2",
+    "tailwindcss": "4.3.3",
+    "vue": "3.5.43",
+    "vue-router": "5.3.1"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "^1.2.0",
+    "@types/culori": "^4.0.1",
+    "@types/node": "^26.5.1",
+    "@vitejs/plugin-vue": "6.0.9",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.2",
+    "vite": "8.3.0",
+    "vue-tsc": "^3.1.0"
+  },
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

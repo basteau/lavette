@@ -1,0 +1,5 @@
+packages:
+  - tests/fixtures/nuxt-ui
+allowBuilds:
+  esbuild: true
+  vue-demi: true

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.nuxt/
+public/
+lavette-theme.css
+components.d.ts
+auto-imports.d.ts
