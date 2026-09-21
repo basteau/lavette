@@ -45,11 +45,6 @@ to `dist/`. To inspect that build locally, run:
 pnpm preview
 ```
 
-For changes to theme generation, also run the
-[Nuxt UI compatibility checks](tests/fixtures/nuxt-ui/README.md). With the main
-dev server running, open `/tests/fixtures/typography/` to compare fonts before
-and after size normalization.
-
 ## License
 
 Lavette is [MIT licensed](LICENSE). Bundled fonts retain their SIL Open Font

@@ -10,10 +10,6 @@ colors are lighter and less intense. Expressive colors are deeper and more
 intense. **Paper warmth** changes the canvas and neutral tint independently.
 Gamut fitting and contrast checks run automatically.
 
-Older saved themes can have different `mood` and `depth` values. Lavette preserves
-those values until the Color character slider moves. The slider's initial
-position is their average.
-
 ## Color scales and modes
 
 The export contains seven color scales: primary, secondary, success, info,
@@ -77,9 +73,7 @@ checked `border-accented` token has a 3:1 target for those boundaries.
 
 These checks do not establish accessibility for a whole app. Custom components,
 backgrounds, and opacity utilities can produce pairs the generator does not
-check. Browser checks remain necessary. The
-[compatibility fixture](../tests/fixtures/nuxt-ui/README.md) covers real Nuxt UI
-components independently of the studio.
+check. Browser checks remain necessary.
 
 ## Control sizes
 
@@ -109,7 +103,3 @@ stays at `100%`.
 The adjustment applies to every supplied weight and italic face, including the
 exported `@font-face` declarations. It applies at every control size.
 [`src/fonts.ts`](../src/fonts.ts) defines the pairings and adjustment values.
-
-The typography fixture at `/tests/fixtures/typography/` compares original and
-normalized fonts at identical CSS sizes, including controls and small text.
-The fixture runs through the studio's dev server.
