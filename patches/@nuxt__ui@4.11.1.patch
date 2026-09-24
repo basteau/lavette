@@ -1,0 +1,22 @@
+diff --git a/dist/runtime/vue/components/Icon.vue b/dist/runtime/vue/components/Icon.vue
+index 2789165699431403cada203d0cf00c7346d813a4..8523b09bc07e57b505eeb4c23af10ffcdce30b7c 100644
+--- a/dist/runtime/vue/components/Icon.vue
++++ b/dist/runtime/vue/components/Icon.vue
+@@ -10,7 +10,8 @@ const props = defineProps({
+   name: { type: null, required: true },
+   mode: { type: String, required: false },
+   size: { type: [String, Number], required: false },
+-  customize: { type: [Function, Boolean, null], required: false }
++  customize: { type: [Function, Boolean, null], required: false },
++  ariaHidden: { type: [Boolean, String], required: false, default: undefined }
+ });
+ const appConfig = useAppConfig();
+ function resolveCustomizeFn(customize2, globalCustomize) {
+@@ -33,6 +34,7 @@ const ssr = computed(() => iconLoaded(icon.value));
+   <IconifyIcon
+     v-if="typeof name === 'string'"
+     :icon="icon"
++    :aria-hidden="ariaHidden === undefined ? undefined : ariaHidden !== false && ariaHidden !== 'false'"
+     :mode="mode"
+     :width="size"
+     :height="size"

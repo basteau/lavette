@@ -162,13 +162,16 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@nuxt/ui@4.11.1': 544e7c15c64b75c4f3234d3f940973bdf2b336e19e2f2d46c7766e4e63de1bd2
+
 importers:
 
   .:
     dependencies:
       '@nuxt/ui':
         specifier: 4.11.1
-        version: 4.11.1(6aa760aa6ab68f51b8446e6b47178786)
+        version: 4.11.1(patch_hash=544e7c15c64b75c4f3234d3f940973bdf2b336e19e2f2d46c7766e4e63de1bd2)(6aa760aa6ab68f51b8446e6b47178786)
       culori:
         specifier: ^4.0.2
         version: 4.0.2
@@ -214,7 +217,7 @@ importers:
     dependencies:
       '@nuxt/ui':
         specifier: 4.11.1
-        version: 4.11.1(6aa760aa6ab68f51b8446e6b47178786)
+        version: 4.11.1(patch_hash=544e7c15c64b75c4f3234d3f940973bdf2b336e19e2f2d46c7766e4e63de1bd2)(6aa760aa6ab68f51b8446e6b47178786)
       nuxt:
         specifier: 4.5.2
         version: 4.5.2(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@oxc-project/types@0.150.0)(@types/node@26.6.2)(@vue/compiler-sfc@3.5.43)(db0@0.3.4)(esbuild@0.28.2)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(magicast@0.5.5)(rolldown@1.2.9)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.9)(rollup@4.63.4))(rollup@4.63.4)(srvx@0.11.22)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(typescript@6.0.3)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15))(vue-tsc@3.3.11(typescript@6.0.3))
@@ -227,7 +230,7 @@ importers:
     dependencies:
       '@nuxt/ui':
         specifier: 4.11.1
-        version: 4.11.1(6aa760aa6ab68f51b8446e6b47178786)
+        version: 4.11.1(patch_hash=544e7c15c64b75c4f3234d3f940973bdf2b336e19e2f2d46c7766e4e63de1bd2)(6aa760aa6ab68f51b8446e6b47178786)
       '@vitejs/plugin-vue':
         specifier: 6.0.9
         version: 6.0.9(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15))(vue@3.5.43(typescript@6.0.3))
@@ -5248,7 +5251,7 @@ snapshots:
       rc9: 3.1.0
       std-env: 4.2.0
 
-  '@nuxt/ui@4.11.1(6aa760aa6ab68f51b8446e6b47178786)':
+  '@nuxt/ui@4.11.1(patch_hash=544e7c15c64b75c4f3234d3f940973bdf2b336e19e2f2d46c7766e4e63de1bd2)(6aa760aa6ab68f51b8446e6b47178786)':
     dependencies:
       '@floating-ui/dom': 1.8.0
       '@iconify/vue': 5.0.2(vue@3.5.43(typescript@6.0.3))
