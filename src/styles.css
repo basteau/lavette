@@ -925,3 +925,36 @@ p {
   .semantic-example:nth-child(even) { border-left: 0; }
   .semantic-example + .semantic-example { border-top: 1px solid var(--ui-border-muted); }
 }
+
+.control-details summary {
+  cursor: pointer;
+  color: var(--ui-text-muted);
+  font-size: 13px;
+  padding-block: 8px;
+}
+.export-preview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: calc(var(--ui-radius) * 2);
+}
+.install-steps {
+  display: grid;
+  gap: 18px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.install-steps li { display: flex; gap: 12px; }
+.install-steps li > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  height: 24px;
+  border: 1px solid var(--ui-border);
+  border-radius: 50%;
+  font-size: 12px;
+}
+.install-steps small { display: block; color: var(--ui-text-muted); margin-top: 4px; line-height: 1.6; }

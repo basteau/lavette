@@ -5,11 +5,14 @@ The export supports both Nuxt and Vue with Vite.
 
 ## Download the theme
 
-1. In the studio, select **Export theme**.
-2. Select **Download CSS** to save `lavette-theme.css`.
-3. Under **Project framework**, choose **Nuxt** or **Vue / Vite**.
-4. Select **Download config** to save `lavette-ui.config.ts`.
-5. Download each listed font file and its license.
+1. In the studio, select **Export theme** and choose **Nuxt** or **Vue / Vite**.
+2. Select **Download theme ZIP** and unzip it.
+3. Copy `lavette-theme.css` beside your main stylesheet and merge the included
+   `public/fonts/` folder into your project. All selected fonts and licenses are included.
+4. Follow the included `README.md` to merge `lavette-ui.config.ts` into your configuration.
+
+The ZIP also includes `lavette-theme.json`, a record of the exact generator settings.
+The **Only need the code?** section offers individual CSS and configuration copy actions.
 
 ## Import the CSS
 
@@ -31,7 +34,7 @@ color mapping.
 
 ## Add the fonts
 
-1. Copy the downloaded font files and their OFL licenses into your app's
+1. Copy the included font files and their OFL licenses into your app's
    `public/fonts/` directory.
 2. If your app serves assets from a different base path, update the `/fonts/`
    URLs in `lavette-theme.css`.

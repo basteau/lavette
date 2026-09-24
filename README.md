@@ -18,7 +18,8 @@ pnpm dev
 ```
 
 Open the local URL printed by Vite. Use **Save** to keep a theme in this browser
-or **Export theme** to download its CSS, size configuration, and font files.
+or **Export theme** to download one ZIP with CSS, size configuration, fonts, licenses,
+and installation instructions. Your current design is restored when you reload.
 
 ## Use your theme
 
@@ -36,6 +37,7 @@ Run the tests and production build from the repository root:
 ```sh
 pnpm test
 pnpm build
+pnpm --filter lavette-nuxt-integration build
 ```
 
 The build generates Nuxt UI types, checks TypeScript, and writes the static site

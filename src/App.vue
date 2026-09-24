@@ -9,11 +9,20 @@ import {
   type PaletteValues,
 } from "./palette";
 import { themeStyles, corePaletteColors, focusStyles } from "./theme";
-import { loadFontPairing, FONT_PAIRINGS, fontPairing, fontAssets } from "./fonts";
-import { UI_SIZE_OPTIONS, uiSizeProps, exportSizeConfig } from "./sizing";
+import { loadFontPairing, fontPairing } from "./fonts";
+import { uiSizeProps, exportSizeConfig } from "./sizing";
 import Showcase from "./Showcase.vue";
+import DesignControls from "./DesignControls.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
-const values = ref(randomValues());
+const draftKey = "lavette-draft-v1";
+const values = ref(normalize({ recipe: "tonal", hue: 185, mood: 45, depth: 45, paperWarmth: 30 }));
+try {
+  const draft = localStorage.getItem(draftKey);
+  if (draft) values.value = normalize(JSON.parse(draft));
+} catch { /* The studio also works without browser storage. */ }
+watch(values, value => {
+  try { localStorage.setItem(draftKey, JSON.stringify(value)); } catch { /* Collection saves report storage errors. */ }
+}, { deep: true });
 const appliedFontPairing = ref(values.value.fontPairing);
 const palette = computed(() => generatePalette({ ...values.value, fontPairing: appliedFontPairing.value }));
 const dark = ref(false);
@@ -74,24 +83,6 @@ const isSaved = computed(() =>
     (s) => JSON.stringify(s.values) === JSON.stringify(values.value),
   ),
 );
-const sliders = [
-  { key: "hue", label: "Hue", max: 359, step: 1 },
-  { key: "mood", label: "Color character", max: 100, step: 1 },
-  { key: "paperWarmth", label: "Paper warmth", max: 100, step: 1 },
-  { key: "focusOffset", label: "Focus offset", max: 4, step: 1 },
-  { key: "radius", label: "Corner radius", max: 0.5, step: 0.025 },
-] as const;
-type SliderKey = typeof sliders[number]["key"];
-function sliderValue(key: SliderKey): number {
-  // Old saved themes may have independently tuned mood/depth. Keep their colors
-  // intact until the user changes character, then move both dimensions together.
-  return key === "mood" ? Math.round((values.value.mood + values.value.depth) / 2) : values.value[key];
-}
-function setSliderValue(key: SliderKey, value: number | number[] | undefined) {
-  if (typeof value !== "number") return;
-  if (key === "mood") values.value = { ...values.value, mood: value, depth: value };
-  else values.value[key] = value;
-}
 function shuffle() {
   values.value = { ...randomValues(), fontPairing: values.value.fontPairing, focusOffset: values.value.focusOffset, uiSize: values.value.uiSize };
 }
@@ -137,18 +128,43 @@ async function copy(text: string) {
     manualCopy.value = text;
   }
 }
-function downloadFile(content: string, filename: string, type = "text/plain") {
+function downloadFile(content: BlobPart, filename: string, type = "text/plain") {
   const url = URL.createObjectURL(
     new Blob([content], { type }),
   );
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  document.body.append(a);
   a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function download() {
   downloadFile(exportCSS(palette.value), "lavette-theme.css", "text/css");
+}
+const packaging = ref(false);
+const exportError = ref("");
+async function downloadPackage() {
+  packaging.value = true;
+  exportError.value = "";
+  // Snapshot the preview before asynchronous asset loading.
+  const current = palette.value;
+  const target = exportTarget.value;
+  try {
+    const { createThemePackage } = await import("./theme-package");
+    const bytes = await createThemePackage(current, target, async path => {
+      const response = await fetch(`${import.meta.env.BASE_URL}${path}`, { signal: AbortSignal.timeout(15000) });
+      if (!response.ok || response.headers.get("content-type")?.includes("text/html")) throw new Error(`Missing asset: ${path}`);
+      return new Uint8Array(await response.arrayBuffer());
+    });
+    downloadFile(new Uint8Array(bytes), "lavette-theme.zip", "application/zip");
+    notify("Theme package ready. Follow the included README to install it.");
+  } catch {
+    exportError.value = "Could not prepare the complete theme. Check your connection and try again.";
+  } finally {
+    packaging.value = false;
+  }
 }
 </script>
 <template>
@@ -190,55 +206,7 @@ function download() {
       <aside class="studio-sidebar">
         <div class="eyebrow">Your design system</div>
         <h2 class="sidebar-title">Make it yours.</h2>
-        <div class="sidebar-controls">
-          <UFormField label="Color relationship"
-            ><USelect
-              v-model="values.recipe"
-              :items="[
-                { label: 'Tonal', value: 'tonal' },
-                { label: 'Soft contrast', value: 'soft' },
-              ]"
-              class="w-full"
-          /></UFormField>
-          <UFormField
-            label="Font pairing"
-            :description="`${pair.serif} + ${pair.sans}`"
-            ><USelect
-              v-model="values.fontPairing"
-              :items="
-                FONT_PAIRINGS.map((p) => ({
-                  label: p.name,
-                  value: String(p.id),
-                }))
-              "
-              class="w-full"
-          /></UFormField>
-          <UFormField label="Default control size" description="Native control sizing; reading text stays stable.">
-            <USelect v-model="values.uiSize" :items="UI_SIZE_OPTIONS" class="w-full" />
-          </UFormField>
-          <div v-for="s in sliders" :key="s.key" class="slider-field">
-            <div class="flex justify-between text-sm">
-              <label :id="`label-${s.key}`">{{ s.label }}</label
-              ><span class="font-mono text-xs text-muted"
-                >{{ sliderValue(s.key)
-                }}{{
-                  s.key === "hue" ? "°" : s.key === "radius" ? "rem" : s.key === "focusOffset" ? "px" : ""
-                }}</span
-              >
-            </div>
-            <USlider
-              :model-value="sliderValue(s.key)"
-              @update:model-value="setSliderValue(s.key, $event)"
-              :aria-labelledby="`label-${s.key}`"
-              :max="s.max"
-              :step="s.step"
-            />
-            <div v-if="s.key === 'mood' || s.key === 'paperWarmth'" class="flex justify-between text-xs text-muted">
-              <span>{{ s.key === 'mood' ? 'Quiet' : 'Neutral' }}</span>
-              <span>{{ s.key === 'mood' ? 'Expressive' : 'Warm' }}</span>
-            </div>
-          </div>
-        </div>
+        <DesignControls v-model="values" />
         <div class="grid grid-cols-2 gap-2">
           <UButton
             icon="i-lucide-shuffle"
@@ -297,8 +265,8 @@ function download() {
             </div>
             <h1>A little color.<br />A whole new feeling.</h1>
             <p>
-              Meet your next design system. Explore color, type, and real
-              components that move together, beautifully.
+              Shape a theme for your next Nuxt UI project. Fine-tune the colors
+              and type, try real components, then take it with you.
             </p>
             <div class="flex flex-wrap gap-3 mt-6">
               <UButton
@@ -324,7 +292,7 @@ function download() {
             <div class="art-circle" />
             <div class="art-arch" />
             <div class="art-dot" />
-            <span class="art-star">✳</span>
+            <UIcon name="i-lucide-asterisk" class="art-star" aria-hidden="true" />
             <div class="art-caption">
               <span>LAVETTE / COLOR STUDY</span><span>001</span>
             </div>
@@ -367,49 +335,14 @@ function download() {
       </main>
     </div>
     <UModal
+      :ui="{ header: 'pr-14' }"
       v-model:open="settings"
       title="Design settings"
-      ><template #body
-        ><div class="space-y-6">
-          <UFormField label="Color relationship"
-            ><USelect
-              v-model="values.recipe"
-              :items="[
-                { label: 'Tonal', value: 'tonal' },
-                { label: 'Soft contrast', value: 'soft' },
-              ]"
-              class="w-full" /></UFormField
-          ><UFormField label="Font pairing"
-            ><USelect
-              v-model="values.fontPairing"
-              :items="
-                FONT_PAIRINGS.map((p) => ({
-                  label: p.name,
-                  value: String(p.id),
-                }))
-              "
-              class="w-full"
-          /></UFormField>
-          <UFormField label="Default control size" description="Native control sizing; reading text stays stable.">
-            <USelect v-model="values.uiSize" :items="UI_SIZE_OPTIONS" class="w-full" />
-          </UFormField>
-          <div v-for="s in sliders" :key="s.key" class="space-y-3">
-            <label :id="`mobile-${s.key}`" class="flex justify-between"
-              >{{ s.label }}<code>{{ sliderValue(s.key) }}{{ s.key === "focusOffset" ? "px" : s.key === "radius" ? "rem" : s.key === "hue" ? "°" : "" }}</code></label
-            ><USlider
-              :model-value="sliderValue(s.key)"
-              @update:model-value="setSliderValue(s.key, $event)"
-              :aria-labelledby="`mobile-${s.key}`"
-              :max="s.max"
-              :step="s.step"
-            />
-            <div v-if="s.key === 'mood' || s.key === 'paperWarmth'" class="flex justify-between text-xs text-muted">
-              <span>{{ s.key === 'mood' ? 'Quiet' : 'Neutral' }}</span>
-              <span>{{ s.key === 'mood' ? 'Expressive' : 'Warm' }}</span>
-            </div>
-          </div></div></template
-    ></UModal>
+      description="Adjust your theme. Changes appear in the preview and save automatically."
+      ><template #body><DesignControls v-model="values" /></template>
+    </UModal>
     <UModal
+      :ui="{ header: 'pr-14' }"
       v-model:open="collection"
       title="Your collection"
       description="Up to eight themes, saved in this browser."
@@ -459,79 +392,46 @@ function download() {
       ></UModal
     >
     <UModal
+      :ui="{ header: 'pr-14' }"
       v-model:open="exportOpen"
-      title="Take your theme with you"
-      ><template #body
-        ><div class="space-y-5">
-          <p>
-            Import the stylesheet after Tailwind CSS and Nuxt UI. It includes
-            all seven ramps, semantic tokens, both color modes, radius, focus offset, and your
-            chosen typography.
-          </p>
-          <pre class="code-block">
-@import "tailwindcss";
-@import "@nuxt/ui";
-@import "./lavette-theme.css";</pre>
-          <div class="flex gap-3">
-            <UButton icon="i-lucide-download" @click="download"
-              >Download CSS</UButton
-            ><UButton
-              icon="i-lucide-copy"
-              variant="outline"
-              @click="copy(exportCSS(palette))"
-              >Copy CSS</UButton
-            >
+      title="Your theme, ready to use"
+      description="For existing Nuxt UI 4 and Tailwind CSS 4 projects."
+      ><template #body>
+        <div class="space-y-6">
+          <div class="export-preview">
+            <span v-for="c in core" :key="c.label" :style="{ background: format(c.color) }" />
           </div>
-          <USeparator />
-          <h3 class="font-medium">Default control size · {{ values.uiSize.toUpperCase() }}</h3>
-          <p class="text-sm text-muted">The stylesheet contains colors and typography. Merge this configuration to apply your default control size; explicit component sizes still take priority.</p>
-          <UFormField label="Project framework">
-            <USelect v-model="exportTarget" :items="[{ label: 'Nuxt', value: 'nuxt' }, { label: 'Vue / Vite', value: 'vue' }]" />
+          <div>
+            <h3 class="font-medium">{{ pair.name }} · {{ values.uiSize.toUpperCase() }} controls</h3>
+            <p class="text-sm text-muted mt-1">Light and dark themes, fonts, licenses, and setup instructions. One download.</p>
+          </div>
+          <UFormField label="Your project">
+            <USelect v-model="exportTarget" :disabled="packaging" :items="[{ label: 'Nuxt', value: 'nuxt' }, { label: 'Vue / Vite', value: 'vue' }]" class="w-full" />
           </UFormField>
-          <details>
-            <summary class="text-sm cursor-pointer">View size configuration</summary>
-            <pre class="code-block mt-3 max-h-64 overflow-auto">{{ sizeConfig }}</pre>
+          <ol class="install-steps">
+            <li><span>1</span><div>Unzip and copy the files.<small>Place the CSS beside your main stylesheet and merge public/fonts into your project.</small></div></li>
+            <li><span>2</span><div>Import your theme.<small>Add this after your Tailwind CSS and Nuxt UI imports.</small></div></li>
+          </ol>
+          <pre class="code-block">@import "./lavette-theme.css";</pre>
+          <p class="text-sm text-muted">The included README explains where to merge the control size settings. Your existing components pick up the colors and body font automatically.</p>
+          <UAlert v-if="exportError" color="error" variant="soft" :title="exportError" />
+          <details class="control-details">
+            <summary>Only need the code?</summary>
+            <div class="flex flex-wrap gap-2 pt-4">
+              <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(exportCSS(palette))">Copy CSS</UButton>
+              <UButton icon="i-lucide-download" color="neutral" variant="outline" @click="download">Download CSS</UButton>
+              <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(sizeConfig)">Copy size config</UButton>
+            </div>
+            <p class="text-sm text-muted mt-3">CSS alone requires the fonts from the ZIP in public/fonts.</p>
           </details>
-          <div class="flex flex-wrap gap-3">
-            <UButton icon="i-lucide-download" @click="downloadFile(sizeConfig, 'lavette-ui.config.ts')">Download config</UButton>
-            <UButton icon="i-lucide-copy" variant="outline" @click="copy(sizeConfig)">Copy config</UButton>
-          </div>
-          <USeparator />
-          <h3 class="font-medium">{{ pair.name }} font files</h3>
-          <p class="text-sm text-muted">
-            Copy these files and their licenses into public/fonts.
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              v-for="asset in fontAssets(appliedFontPairing)"
-              :key="asset.file"
-              :href="`/fonts/${asset.file}`"
-              download
-              external
-              color="neutral"
-              variant="outline"
-              size="xs"
-              >{{ asset.family }} · {{ asset.style }}</UButton
-            ><UButton
-              v-for="license in [
-                ...new Set(
-                  fontAssets(appliedFontPairing).map((a) => a.license),
-                ),
-              ]"
-              :key="license"
-              :href="`/fonts/${license}`"
-              download
-              external
-              color="neutral"
-              variant="link"
-              size="xs"
-              >{{ license }}</UButton
-            >
-          </div>
-        </div></template
-      ></UModal
-    >
+        </div>
+      </template>
+      <template #footer>
+        <UButton icon="i-lucide-download" block size="lg" :loading="packaging" :disabled="values.fontPairing !== appliedFontPairing" @click="downloadPackage">Download theme ZIP</UButton>
+      </template>
+    </UModal>
     <UModal
+      :ui="{ header: 'pr-14' }"
       :open="!!manualCopy"
       title="Copy manually"
       description="Clipboard access is unavailable. Select and copy the text below."

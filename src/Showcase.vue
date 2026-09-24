@@ -136,7 +136,7 @@ const faq = [
   {
     label: "How do I use this theme in my project?",
     content:
-      "Export the CSS, import it after Tailwind CSS and Nuxt UI, and copy the selected font files into public/fonts. Add the dark class to your root element to switch modes.",
+      "Download the theme ZIP, copy the included fonts folder, and import the CSS after Tailwind CSS and Nuxt UI. Follow the included README for your project’s configuration.",
   },
 ];
 const surfaceTokens = [
