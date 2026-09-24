@@ -26,9 +26,10 @@ The generator and export rules are in [`src/theme.ts`](../src/theme.ts).
 
 ## Status colors
 
-Success, info, warning, and error each have separate colors for text, fills,
-hover states, tints, and indicators. The table uses success as an example.
-The other statuses use the same suffixes.
+Primary, secondary, success, info, warning, and error each have separate colors
+for text, fills, hover states, tints, and indicators. Brand fills retain their
+color without forcing text and button backgrounds to share a dark shade. The table uses success as an example.
+The other accent roles use the same suffixes.
 
 | Token | Use |
 | --- | --- |
@@ -41,7 +42,7 @@ The other statuses use the same suffixes.
 
 The export includes CSS rules outside cascade layers that adapt Nuxt UI 4
 utilities. `bg-success text-inverted` uses the fill and its label color.
-`bg-success` without `text-inverted` uses the indicator color. The other statuses
+`bg-success` without `text-inverted` uses the indicator color. The other accent roles
 follow the same rules.
 
 These rules cover solid, soft, subtle, and link treatments, including supported

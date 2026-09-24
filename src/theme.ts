@@ -6,6 +6,7 @@ export const THEME_ROLES = ["primary", "secondary", "success", "info", "warning"
 export const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 export type ThemeRole = typeof THEME_ROLES[number];
 export type StatusRole = keyof typeof STATUS_HUES;
+export type SemanticRole = Exclude<ThemeRole, "neutral">;
 export type Shade = typeof SHADES[number];
 export type ColorMode = "light" | "dark";
 export type Tokens = Record<`--${string}`, string>;
@@ -15,7 +16,7 @@ export interface Theme {
   tokens: Tokens;
   modes: Record<ColorMode, Tokens>;
   checks: Record<ColorMode, PaletteCheck[]>;
-  semantic: Record<ColorMode, Record<StatusRole, SemanticColors>>;
+  semantic: Record<ColorMode, Record<SemanticRole, SemanticColors>>;
 }
 export interface SemanticColors {
   text: Oklch;
@@ -162,7 +163,7 @@ export function generateTheme(values: PaletteValues, colors: Palette["colors"]):
       m["--ui-border-muted"] = fmt(lightBorders.muted);
       m["--ui-border"] = fmt(lightBorders.standard);
     }
-    semantic[mode] = {} as Record<StatusRole, SemanticColors>;
+    semantic[mode] = {} as Record<SemanticRole, SemanticColors>;
     checks[mode] = [];
     const add = (label: string, ratio: number, target = 4.5) => checks[mode].push({ label, ratio, target });
     for (const role of THEME_ROLES.filter(r => r !== "neutral")) {
@@ -175,40 +176,32 @@ export function generateTheme(values: PaletteValues, colors: Palette["colors"]):
       });
       const shade = candidates.find(passes) ?? candidates[candidates.length - 1];
       const value = scales[role][shade];
-      if (isStatus(role)) {
-        const base = seeds[role];
-        const tint = dark ? value : base;
-        const text = dark ? value : lightestPassing(
-          lightness => fitColor(lightness, base.c, base.h!), 0.58,
-          color => surfaces.every(surface => wcagContrast(color, composite(tint, surface, 0.15)) >= 4.6),
-        );
-        const onFill = dark || role === "warning" ? n[950] : colors.canvas;
-        const indicator = dark ? value : role === "warning" ? text : lightestPassing(
-          lightness => fitColor(lightness, base.c, base.h!), 0.62,
-          color => wcagContrast(onFill, color) >= 4.6
-            && surfaces.every(surface => wcagContrast(color, surface) >= 3.1),
-        );
-        // Amber needs a genuinely light fill for a dark label. Do not make
-        // labelled buttons as dark as the small progress/presence indicators.
-        const fill = !dark && role === "warning" ? fitColor(0.79 - statusDepth, base.c, base.h!) : indicator;
-        const hover = fitColor(fill.l + (dark ? 0.035 : -0.025), fill.c, fill.h!);
-        semantic[mode][role] = { text, fill, hover, onFill, indicator, tint };
-        m[`--ui-${role}`] = fmt(text);
-        for (const [name, color] of Object.entries({ fill, hover, "on-fill": onFill, indicator, tint })) {
-          m[`--ui-${role}-${name}`] = fmt(color);
-        }
-        add(`${role} text / surfaces`, Math.min(...surfaces.map(surface => wcagContrast(text, surface))));
-        add(`${role} soft + hover`, Math.min(...surfaces.flatMap(surface => [0.1, 0.15].map(alpha => wcagContrast(text, composite(tint, surface, alpha))))));
-        add(`${role} solid label + hover`, Math.min(wcagContrast(onFill, fill), wcagContrast(onFill, hover)), !dark && role === "warning" ? 7 : 4.5);
-        add(`${role} link hover`, Math.min(...surfaces.map(surface => wcagContrast(text, surface))));
-        add(`${role} indicator / surfaces`, Math.min(...surfaces.map(surface => wcagContrast(indicator, surface))), 3);
-        continue;
+      const base = seeds[role];
+      const tint = dark ? value : base;
+      const text = dark ? value : lightestPassing(
+        lightness => fitColor(lightness, base.c, base.h!), 0.58,
+        color => surfaces.every(surface => wcagContrast(color, composite(tint, surface, 0.15)) >= 4.6),
+      );
+      const onFill = dark || role === "warning" ? n[950] : colors.canvas;
+      const indicator = dark ? value : role === "warning" ? text : lightestPassing(
+        lightness => fitColor(lightness, base.c, base.h!), 0.62,
+        color => wcagContrast(onFill, color) >= 4.6
+          && surfaces.every(surface => wcagContrast(color, surface) >= 3.1),
+      );
+      // Amber needs a genuinely light fill for a dark label. Do not make
+      // labelled buttons as dark as the small progress/presence indicators.
+      const fill = !dark && role === "warning" ? fitColor(0.79 - statusDepth, base.c, base.h!) : indicator;
+      const hover = fitColor(fill.l + (dark ? 0.035 : -0.025), fill.c, fill.h!);
+      semantic[mode][role] = { text, fill, hover, onFill, indicator, tint };
+      m[`--ui-${role}`] = fmt(text);
+      for (const [name, color] of Object.entries({ fill, hover, "on-fill": onFill, indicator, tint })) {
+        m[`--ui-${role}-${name}`] = fmt(color);
       }
-      m[`--ui-${role}`] = `var(--ui-color-${role}-${shade})`;
-      add(`${role} text / surfaces`, Math.min(...surfaces.map(s => wcagContrast(value, s))));
-      add(`${role} soft + hover`, Math.min(...surfaces.map(s => wcagContrast(value, composite(value, s, 0.15)))));
-      add(`${role} solid label + hover`, Math.min(wcagContrast(value, inverted), ...surfaces.map(s => wcagContrast(inverted, composite(value, s, 0.75)))));
-      add(`${role} link hover`, Math.min(...surfaces.map(s => wcagContrast(composite(value, s, 0.75), s))));
+      add(`${role} text / surfaces`, Math.min(...surfaces.map(surface => wcagContrast(text, surface))));
+      add(`${role} soft + hover`, Math.min(...surfaces.flatMap(surface => [0.1, 0.15].map(alpha => wcagContrast(text, composite(tint, surface, alpha))))));
+      add(`${role} solid label + hover`, Math.min(wcagContrast(onFill, fill), wcagContrast(onFill, hover)), !dark && role === "warning" ? 7 : 4.5);
+      add(`${role} link hover`, Math.min(...surfaces.map(surface => wcagContrast(text, surface))));
+      add(`${role} indicator / surfaces`, Math.min(...surfaces.map(surface => wcagContrast(indicator, surface))), 3);
     }
     for (const [label, shade] of [["Dimmed", dark ? 300 : 600], ["Muted", dark ? 200 : 700], ["Body", dark ? 100 : 900]] as const) {
       add(`${label} text / surfaces`, Math.min(...surfaces.map(s => wcagContrast(n[shade], s))));
@@ -261,7 +254,7 @@ export const focusStyles = `/* Native controls get a clear fallback; Nuxt UI kee
  * The existing --ui-role alias remains the safe text/fallback color.
  */
 export function semanticStyles(): string {
-  return Object.keys(STATUS_HUES).map(role => {
+  return THEME_ROLES.filter(role => role !== "neutral").map(role => {
     const bg = `.bg-${role}`;
     const enabled = ":not(:disabled):not([aria-disabled=true])";
     const escape = (value: string) => value.replace(/[:/]/g, "\\$&");
@@ -283,5 +276,5 @@ export function themeStyles(palette: Palette): string {
   return `:root {\n${declarations({ ...palette.theme.tokens })}\n}\n\n:root, .light {\n  color-scheme: light;\n${declarations(palette.theme.modes.light)}\n}\n\n.dark {\n  color-scheme: dark;\n${declarations(palette.theme.modes.dark)}\n}\n\n${semanticStyles()}\n`;
 }
 export function exportThemeCSS(palette: Palette): string {
-  return `/* lavette · Nuxt UI 4 / Tailwind CSS 4\n   Import this file AFTER tailwindcss and @nuxt/ui in your main CSS.\n   No app.config.ts color mapping needed: all seven --ui-color-* scales are supplied.\n   Copy the selected font files into public/fonts (keep their OFL licenses).\n   Pairing: ${fontPairing(palette.values.fontPairing).name}. Title classes: font-display font-normal leading-display tracking-normal.\n   Font faces below use /fonts/ URLs; adjust them for your deployment base.\n   Toggle the .dark class with Nuxt Color Mode; .light provides explicit light scopes.\n   Recipe ${palette.values.recipe} · Hue ${palette.values.hue} · Mood ${palette.values.mood}\n   Depth ${palette.values.depth} · Warmth ${palette.values.paperWarmth}\n   Seven OKLCH ramps; deep status shades are individually gamut-fitted.\n   Status hues are fixed; separate text, fill, hover, and tint tokens preserve meaning.\n   Includes Nuxt UI semantic utility treatments; keep these rules with the tokens.\n   Default control size: ${palette.values.uiSize}; merge the companion size configuration. */\n\n${fontFaces(palette.values.fontPairing)}\n\n@theme {\n${declarations({ ...fontTokens(palette.values.fontPairing), ...typographyTokens(palette.values.fontPairing) })}\n}\n\n${themeStyles(palette)}\n${focusStyles}`;
+  return `/* lavette · Nuxt UI 4 / Tailwind CSS 4\n   Import this file AFTER tailwindcss and @nuxt/ui in your main CSS.\n   No app.config.ts color mapping needed: all seven --ui-color-* scales are supplied.\n   Copy the selected font files into public/fonts (keep their OFL licenses).\n   Pairing: ${fontPairing(palette.values.fontPairing).name}. Title classes: font-display font-normal leading-display tracking-normal.\n   Font faces below use /fonts/ URLs; adjust them for your deployment base.\n   Toggle the .dark class with Nuxt Color Mode; .light provides explicit light scopes.\n   Recipe ${palette.values.recipe} · Hue ${palette.values.hue} · Mood ${palette.values.mood}\n   Depth ${palette.values.depth} · Warmth ${palette.values.paperWarmth}\n   Seven OKLCH ramps; deep status shades are individually gamut-fitted.\n   Status hues are fixed; all six accent roles have separate text, fill, hover, and tint tokens.\n   Includes Nuxt UI semantic utility treatments; keep these rules with the tokens.\n   Default control size: ${palette.values.uiSize}; merge the companion size configuration. */\n\n${fontFaces(palette.values.fontPairing)}\n\n@theme {\n${declarations({ ...fontTokens(palette.values.fontPairing), ...typographyTokens(palette.values.fontPairing) })}\n}\n\n${themeStyles(palette)}\n${focusStyles}`;
 }

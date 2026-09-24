@@ -144,7 +144,7 @@ describe("Nuxt UI theme", () => {
         const n = palette.theme.scales.neutral;
         const surfaces = [dark ? n[950] : palette.colors.canvas, n[dark ? 900 : 50], n[dark ? 800 : 100], n[dark ? 800 : 200]];
         const tokens = palette.theme.modes[mode];
-        for (const role of Object.keys(STATUS_HUES) as (keyof typeof STATUS_HUES)[]) {
+        for (const role of THEME_ROLES.filter(role => role !== "neutral")) {
           const colors = palette.theme.semantic[mode][role];
           assert.deepEqual(parse(tokens[`--ui-${role}`]), colors.text);
           for (const [name, color] of Object.entries({ fill: colors.fill, hover: colors.hover, "on-fill": colors.onFill, indicator: colors.indicator, tint: colors.tint })) {
