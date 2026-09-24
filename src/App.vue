@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect, onUnmounted } from "vue";
+import { computed, ref, watch, watchEffect, onUnmounted, defineAsyncComponent } from "vue";
 import {
   generatePalette,
   randomValues,
@@ -11,9 +11,9 @@ import {
 import { themeStyles, corePaletteColors, focusStyles } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
 import { uiSizeProps, exportSizeConfig } from "./sizing";
-import Showcase from "./Showcase.vue";
 import DesignControls from "./DesignControls.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
+const Showcase = defineAsyncComponent(() => import("./Showcase.vue"));
 const draftKey = "lavette-draft-v1";
 const values = ref(normalize({ recipe: "tonal", hue: 185, mood: 45, depth: 45, paperWarmth: 30 }));
 try {

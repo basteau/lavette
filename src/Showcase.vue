@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch, onMounted } from "vue";
 import SemanticOverview from "./SemanticOverview.vue";
 import ServiceScenario from "./ServiceScenario.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 import type { Palette } from "./palette";
 import { THEME_ROLES, SHADES } from "./theme";
 import { fontPairing } from "./fonts";
+// Fragment navigation can run before this asynchronously loaded view exists.
+onMounted(() => {
+  const target = document.getElementById(window.location.hash.slice(1));
+  target?.scrollIntoView({ behavior: "instant" });
+});
 const props = defineProps<{ palette: Palette; dark: boolean }>();
 const emit = defineEmits<{ copy: [text: string]; export: [] }>();
 const pair = computed(() => fontPairing(props.palette.values.fontPairing));
