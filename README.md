@@ -7,6 +7,9 @@ storage. There is no backend.
 
 The studio uses Vue and Vite. It does not require a Nuxt app to run.
 
+Use the public studio at [lavette.exe.xyz](https://lavette.exe.xyz).
+See [deployment instructions](DEPLOY.md) to publish an update.
+
 ## Run locally
 
 Use Node.js 22.12 or later and the pnpm version pinned in `package.json`.
