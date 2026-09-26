@@ -28,23 +28,28 @@ const settings = ref(false);
 const collection = ref(false);
 const exportOpen = ref(false);
 const toast = useToast();
+// One toast per message, so a notice never inherits another's actions or duration.
 function notify(title: string, duration = 5000) {
-  toast.add({ id: "studio-notice", title, duration });
+  toast.add({ id: title, title, duration });
 }
 const manualCopy = ref("");
 const storageKey = "palette-lab-favorites-v1";
 type Saved = { id: string; values: PaletteValues };
 const saved = ref<Saved[]>([]);
+let stored: string | null = null;
 try {
-  const data = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  stored = localStorage.getItem(storageKey);
+} catch {
+  notify("Local storage is unavailable. Themes can still be saved for this visit.", 0);
+}
+try {
+  const data = JSON.parse(stored || "[]");
   if (Array.isArray(data))
     saved.value = data
       .filter((e) => e && typeof e.id === "string")
       .slice(0, 8)
       .map((e) => ({ id: e.id, values: normalize(e.values) }));
-} catch {
-  notify("Local storage is unavailable. Themes can still be saved for this visit.", 0);
-}
+} catch { /* Unreadable saved themes are skipped. */ }
 const style = document.createElement("style");
 style.id = "lavette-generated-theme";
 document.head.append(style);
