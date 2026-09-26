@@ -22,10 +22,7 @@ function preview(status: typeof statuses[number]) {
 <template>
   <div class="semantic-overview mt-8">
     <div class="specimen-label flex-wrap gap-4">
-      <div>
-        <h3>Status at a glance</h3>
-        <p class="text-sm text-muted mt-2 mb-0">Compare messages, actions, and indicators on each surface. Actions preview a notification.</p>
-      </div>
+      <h3>Status at a glance</h3>
       <UFormField label="Preview surface">
         <USelect v-model="surface" :items="surfaces" class="min-w-36" />
       </UFormField>

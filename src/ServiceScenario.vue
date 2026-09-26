@@ -25,7 +25,6 @@ function remove() {
   <UCard class="mt-6">
     <div class="specimen-label">
       <h3>A release, from warning to recovery</h3>
-      <UBadge color="neutral" variant="outline">Interactive demo</UBadge>
     </div>
     <div class="two-column">
       <div class="space-y-4">

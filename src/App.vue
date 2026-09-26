@@ -11,6 +11,7 @@ import {
 import { themeStyles, fontStyles, corePaletteColors, focusStyles } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
 import DesignControls from "./DesignControls.vue";
+import ThemeArt from "./ThemeArt.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 const Showcase = defineAsyncComponent(() => import("./Showcase.vue"));
 const draftKey = "lavette-draft-v1";
@@ -215,8 +216,9 @@ function download() {
               ['colors', 'Color system', '02'],
               ['typography', 'Typography', '03'],
               ['components', 'Components', '04'],
-              ['patterns', 'In practice', '05'],
-              ['tokens', 'Surfaces & tokens', '06'],
+              ['pairing', 'Color pairing', '05'],
+              ['patterns', 'In practice', '06'],
+              ['tokens', 'Surfaces & tokens', '07'],
             ]"
             :key="id"
             :href="`#${id}`"
@@ -264,12 +266,9 @@ function download() {
           <div
             class="hero-art"
             role="img"
-            aria-label="Geometric artwork using your generated primary, secondary, and neutral colors"
+            aria-label="Landscape artwork in your generated primary and secondary colors"
           >
-            <div class="art-circle" />
-            <div class="art-arch" />
-            <div class="art-dot" />
-            <UIcon name="i-lucide-asterisk" class="art-star" aria-hidden="true" />
+            <ThemeArt variant="landscape" />
             <div class="art-caption">
               <span>LAVETTE / COLOR STUDY</span><span>001</span>
             </div>
@@ -299,7 +298,6 @@ function download() {
         />
         <footer class="page-footer">
           <span class="wordmark">lavette</span>
-          <p>A small starting point for something distinctly yours.</p>
           <UButton
             variant="link"
             color="neutral"

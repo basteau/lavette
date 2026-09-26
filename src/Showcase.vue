@@ -2,6 +2,8 @@
 import { computed, reactive, ref, watch, onMounted } from "vue";
 import SemanticOverview from "./SemanticOverview.vue";
 import ServiceScenario from "./ServiceScenario.vue";
+import PairingShowcase from "./PairingShowcase.vue";
+import ThemeArt from "./ThemeArt.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 import type { Palette } from "./palette";
 import { THEME_ROLES, SHADES } from "./theme";
@@ -164,25 +166,14 @@ const passes = computed(() =>
       <div>
         <div class="eyebrow">02 / THE FOUNDATION</div>
         <h2>A spectrum with purpose.</h2>
-        <p>
-          Seven roles, eleven shades each. Click any shade to copy its token.
-        </p>
+        <p>Click a shade to copy its token.</p>
       </div>
       <UBadge color="neutral" variant="outline">OKLCH · sRGB</UBadge>
     </div>
     <div class="palette-table">
       <div v-for="role in THEME_ROLES" :key="role" class="palette-row">
         <div class="palette-label">
-          {{ role
-          }}<span>{{
-            role === "neutral"
-              ? "Surfaces & text"
-              : role === "primary"
-                ? "Your signature"
-                : role === "secondary"
-                  ? "A supporting voice"
-                  : "Semantic color"
-          }}</span>
+          {{ role }}
         </div>
         <div class="ramp">
           <button
@@ -291,7 +282,7 @@ const passes = computed(() =>
           @click="activity = `${size} button pressed.`"
           >{{ size.toUpperCase() }}</UButton
         ><UButton disabled>Disabled</UButton><UButton loading>Loading</UButton
-        ><UTooltip text="A little context, right on cue"
+        ><UTooltip text="Tooltip"
           ><UButton
             icon="i-lucide-info"
             color="neutral"
@@ -325,7 +316,7 @@ const passes = computed(() =>
     <div class="two-column stretch">
       <UCard
         ><div class="specimen-label">
-          <h3>A place for input</h3>
+          <h3>Forms</h3>
           <code>UForm · UInput · USelect</code>
         </div>
         <UTabs
@@ -403,7 +394,7 @@ const passes = computed(() =>
       <div class="flex flex-col gap-6">
         <UCard
           ><div class="specimen-label">
-            <h3>A little feedback</h3>
+            <h3>Feedback</h3>
             <code>UAlert · UProgress</code>
           </div>
           <UFormField label="Feedback style" class="mb-4">
@@ -425,13 +416,13 @@ const passes = computed(() =>
               color="info"
               :variant="feedbackVariant"
               icon="i-lucide-info"
-              title="A fresh perspective"
-              description="Switch to dark mode to see another side of your theme."
+              title="New version available"
+              description="Refresh to get the latest features."
             /><UAlert
               color="warning"
               :variant="feedbackVariant"
               icon="i-lucide-triangle-alert"
-              title="A little attention needed"
+              title="Trial ending soon"
               description="Your trial ends in three days."
             /><UAlert
               color="error"
@@ -449,7 +440,7 @@ const passes = computed(() =>
             <UProgress :model-value="volume" /></div></UCard
         ><UCard class="flex-1"
           ><div class="specimen-label">
-            <h3>People & presence</h3>
+            <h3>People</h3>
             <code>UAvatar · UChip · UBadge</code>
           </div>
           <div class="flex items-center justify-between gap-3">
@@ -473,19 +464,15 @@ const passes = computed(() =>
     <div class="two-column mt-6">
       <UCard
         ><div class="specimen-label">
-          <h3>Room for more</h3>
+          <h3>Disclosure</h3>
           <code>UAccordion</code>
         </div>
         <UAccordion :items="faq" /></UCard
       ><UCard
         ><div class="specimen-label">
-          <h3>Beyond the canvas</h3>
+          <h3>Overlays</h3>
           <code>UModal · USlideover · UPopover</code>
         </div>
-        <p class="text-muted text-sm mb-6">
-          Explore elevated surfaces, focus management, and the details that sit
-          above your interface.
-        </p>
         <div class="flex flex-wrap gap-3">
           <UButton variant="outline" @click="modal = true">Open dialog</UButton
           ><UButton variant="soft" @click="drawer = true">Open panel</UButton
@@ -496,11 +483,10 @@ const passes = computed(() =>
               trailing-icon="i-lucide-chevron-down"
               >Quick note</UButton
             ><template #content
-              ><div class="p-5 max-w-64">
-                <h4 class="font-medium mb-2">The little details matter.</h4>
+              ><div class="p-4 max-w-64">
+                <h4 class="font-medium mb-1">Pinned note</h4>
                 <p class="text-sm text-muted">
-                  This is a real Nuxt UI popover, using your elevated surface
-                  and border tokens.
+                  Ship the new palette before Friday’s review.
                 </p>
               </div></template
             ></UPopover
@@ -509,12 +495,12 @@ const passes = computed(() =>
       >
     </div>
   </section>
+  <PairingShowcase />
   <section id="patterns" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">05 / PUT IT TO WORK</div>
+        <div class="eyebrow">06 / PUT IT TO WORK</div>
         <h2>From tokens to everyday things.</h2>
-        <p>A glimpse of your theme in a product people might actually use.</p>
       </div>
     </div>
     <UCard :ui="{ body: 'p-0 sm:p-0' }"
@@ -523,10 +509,7 @@ const passes = computed(() =>
           <span class="workspace-icon"
             ><UIcon name="i-lucide-command" class="size-5"
           /></span>
-          <div>
-            <h3 class="font-semibold">Studio workspace</h3>
-            <p class="text-sm text-muted">Good things take shape here.</p>
-          </div>
+          <h3 class="font-semibold">Studio workspace</h3>
         </div>
       </div>
       <div class="metrics">
@@ -541,7 +524,7 @@ const passes = computed(() =>
             {
               label: 'Team happiness',
               value: '96%',
-              change: 'A little better every day',
+              change: '+4 pts since May',
             },
           ]"
           :key="m.label"
@@ -611,9 +594,6 @@ const passes = computed(() =>
       <UCard class="membership"
         ><UBadge variant="subtle">THE STUDIO PLAN</UBadge>
         <h3>A little space<br />for your big ideas.</h3>
-        <p class="text-muted">
-          For independent minds building something of their own.
-        </p>
         <div class="price">€24<span>/ month</span></div>
         <ul class="space-y-3 mb-7">
           <li
@@ -638,14 +618,10 @@ const passes = computed(() =>
         ></UCard
       >
       <div class="editorial-card">
-        <div class="editorial-art" aria-hidden="true"><i /><i /><i /></div>
+        <div class="editorial-art"><ThemeArt variant="still-life" /></div>
         <div class="editorial-copy">
           <div class="eyebrow">FIELD NOTES / 004</div>
           <h3>Finding the extraordinary<br />in the everyday.</h3>
-          <p>
-            A study in color, composition, and leaving just enough room to
-            breathe.
-          </p>
           <UButton
             color="neutral"
             variant="link"
@@ -661,13 +637,10 @@ const passes = computed(() =>
   <section id="tokens" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">06 / UNDER THE SURFACE</div>
+        <div class="eyebrow">07 / UNDER THE SURFACE</div>
         <h2>The quiet details that hold it together.</h2>
-        <p>
-          Surfaces, borders, and readable contrasts in
-          {{ dark ? "dark" : "light" }} mode.
-        </p>
       </div>
+      <UBadge color="neutral" variant="outline">{{ dark ? "Dark" : "Light" }} mode</UBadge>
     </div>
     <div class="surface-grid">
       <button
@@ -726,7 +699,7 @@ const passes = computed(() =>
         </div>
         <p class="text-sm text-muted mb-5">
           Worst case across all four surfaces, including tinted and hover
-          states. These checks cover color pairs, not whole-site accessibility.
+          states.
         </p>
         <div class="space-y-3">
           <div
@@ -768,53 +741,44 @@ const passes = computed(() =>
   </section>
   <UModal
     v-model:open="modal"
-    title="A place for your next idea"
+    title="Upgrade to Studio"
     ><template #body
       ><div class="space-y-5">
         <UAlert
           color="primary"
           variant="soft"
           icon="i-lucide-sparkles"
-          title="Your theme, on another layer"
-          description="Modal surfaces, text, borders, and actions all inherit the generated tokens."
+          title="14 days free"
+          description="Cancel any time before your trial ends."
         />
-        <p class="text-muted">
-          Try Tab to move between controls, or Escape to return to where you
-          started.
-        </p>
       </div></template
     ><template #footer
       ><UButton color="neutral" variant="outline" @click="modal = false"
-        >Close preview</UButton
+        >Not now</UButton
       ><UButton
         @click="
           modal = false;
           activity = 'Dialog action confirmed.';
         "
-        >Looks good</UButton
+        >Start trial</UButton
       ></template
     ></UModal
   >
   <USlideover
     v-model:open="drawer"
-    title="Finding the extraordinary"
-    description="FIELD NOTES / 004"
+    title="Field notes"
+    description="Issue 004"
     ><template #body
       ><article class="field-note">
-        <div class="eyebrow">A NOTE ON INTENTIONAL DESIGN</div>
-        <h2>Make room<br />for the meaningful.</h2>
+        <div class="field-note-art"><ThemeArt variant="still-life" /></div>
+        <h2>Finding the extraordinary in the everyday.</h2>
         <p>
-          The best systems give us a starting point, then get out of the way. A
-          few well-chosen colors. Type that feels right. Space that lets an idea
-          breathe.
+          A few well-chosen colors, type that feels right, and space that lets
+          an idea breathe. The rest is restraint.
         </p>
         <p>
-          That is the thinking behind this little studio: a theme is more than a
-          collection of values. It is the feeling that connects every small
-          interaction.
+          Good systems give you a starting point, then get out of the way.
         </p>
-        <USeparator class="my-6" /><UAvatar alt="Lavette Studio" />
-        <p class="text-sm mt-3">Made with care, one detail at a time.</p>
       </article></template
     ></USlideover
   >
