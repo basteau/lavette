@@ -25,12 +25,22 @@ or **Export theme** to copy or download one CSS file with Google-hosted fonts. Y
 
 ## Use your theme
 
-Follow [Use an exported theme](docs/use-a-theme.md) to add the export to an
-existing Nuxt UI app. The guide covers CSS import order, fonts,
-and dark mode.
+In an app with Nuxt UI 4 and Tailwind CSS 4, save the export as
+`lavette-theme.css` and import it after both:
 
-See the [theme reference](docs/theme-reference.md) for palette controls, status
-colors, contrast targets, and font sizing.
+```css
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "./lavette-theme.css";
+```
+
+Toggle `.dark` on `<html>` for dark mode (Nuxt Color Mode does this). Fonts load
+from Google; with a Content Security Policy, allow `https://fonts.gstatic.com`
+in `font-src`. For display headings, use
+`font-display font-normal leading-display tracking-normal`.
+
+The [theme reference](docs/theme-reference.md) explains how colors are generated
+and checked.
 
 ## Check changes
 

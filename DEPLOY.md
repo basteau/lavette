@@ -51,7 +51,3 @@ The provider settings are `ssh exe.dev share port lavette 8000` and
 `ssh exe.dev share set-public lavette`. Check current `ssh exe.dev help share`
 before changing them. `HostKeyAlias=exe.dev` verifies the VM against the existing
 trusted exe.dev host key, since exe.dev handles SSH routing.
-
-The initial application source is commit
-`1fd78baaf249a3c632f5422b34bc4a29c30abe6d`; deployment files and the better-deploy
-skill were added locally while setting up hosting.
