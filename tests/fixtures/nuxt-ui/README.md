@@ -17,9 +17,9 @@ pnpm --filter lavette-nuxt-ui-compatibility dev
 Open <http://127.0.0.1:5180>. If that port is in use, open the URL printed by Vite.
 
 The **Theme example** selector loads exports generated from [`presets.ts`](presets.ts).
-The presets cover the default theme, quiet tonal colors with warm paper,
-saturated tonal colors, and saturated soft colors with warm paper. The page
-shows the exact input for the selected preset.
+The presets cover the default theme, a quiet analogous theme on warm paper, a
+saturated brand-tinted theme, and a saturated complementary theme on warm paper.
+The page shows the exact input for the selected preset.
 
 Both `build` and `dev` regenerate the theme CSS with Google-hosted fonts. Git ignores
 these generated files.

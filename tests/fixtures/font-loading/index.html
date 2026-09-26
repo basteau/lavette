@@ -21,7 +21,6 @@
             bytes: css.length,
             font: /--font-sans: ([^;]+)/.exec(css)?.[1],
             hostedFonts: css.includes('https://fonts.gstatic.com/'),
-            localFonts: css.includes('url("/fonts/'),
             dark: css.includes('.dark {'),
           });
         });
