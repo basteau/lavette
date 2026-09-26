@@ -5,6 +5,34 @@ import { generatePalette, normalize, inGamut, exportCSS } from "../src/palette";
 import { THEME_ROLES, SHADES, STATUS_HUES, corePaletteColors, composite } from "../src/theme";
 
 describe("Nuxt UI theme", () => {
+  it("preserves paper warmth through neutral surfaces and translucent hover states", () => {
+    const parse = converter("oklch");
+    for (const paperWarmth of [0, 50, 100]) for (const depth of [0, 100]) {
+      const baseline = generatePalette({ paperWarmth, depth });
+      for (const recipe of ["tonal", "soft"]) for (const hue of [0, 85, 185, 270]) {
+        const p = generatePalette({ recipe, hue, paperWarmth, depth });
+        assert.deepEqual(p.theme.scales.neutral, baseline.theme.scales.neutral, "brand hue must not tint paper surfaces");
+        let previous = p.colors.canvas;
+        for (const shade of [50, 100, 200] as const) {
+          const surface = p.theme.scales.neutral[shade];
+          assert.ok(surface.l < previous.l, "light surfaces must step down from the canvas");
+          assert.equal(surface.h, p.colors.canvas.h);
+          assert.ok(surface.c >= p.colors.canvas.c * 0.98, "surface must retain paper undertone");
+          for (const alpha of [0.5, 0.75, 1]) {
+            const hover = parse(composite(surface, previous, alpha))!;
+            assert.ok(Math.abs(hover.h! - p.colors.canvas.h!) < 2, "hover must not shift toward a cool hue");
+            assert.ok(hover.c >= p.colors.canvas.c * 0.95, "hover must not bleach paper warmth");
+          }
+          previous = surface;
+        }
+        const n = p.theme.scales.neutral;
+        assert.ok(n[950].l < n[900].l && n[900].l < n[800].l);
+        assert.ok(n[950].c < n[800].c && n[800].c < p.colors.canvas.c);
+        assert.equal(n[950].h, p.colors.canvas.h);
+      }
+    }
+  });
+
   it("migrates old saved settings and bounds new controls", () => {
     assert.equal(normalize({}).radius, 0.125);
     assert.equal(normalize({}).focusOffset, 0);
@@ -103,7 +131,7 @@ describe("Nuxt UI theme", () => {
     for (const [, token] of css.matchAll(/(--[\w-]+)\s*:/g)) {
       assert.match(token, /^--(?:ui-|font-|leading-)/);
     }
-    assert.equal((css.match(/color-mix\(in oklab/g) ?? []).length, 50);
+    assert.equal((css.match(/color-mix\(in oklab/g) ?? []).length, 40);
     for (const mode of ["light", "dark"] as const) {
       const all = { ...p.theme.tokens, ...p.theme.modes[mode] };
       const resolve = (token: string, seen = new Set<string>()): void => {
@@ -121,7 +149,7 @@ describe("Nuxt UI theme", () => {
       const { theme } = generatePalette({ recipe, hue, mood: 100 });
       for (const role of THEME_ROLES) for (const shade of SHADES) {
         const css = theme.tokens[`--ui-color-${role}-${shade}`];
-        if (shade === 500 || (role in STATUS_HUES && shade > 500)) {
+        if (role === "neutral" || shade === 500 || (role in STATUS_HUES && shade > 500)) {
           assert.deepEqual(converter("oklch")(css), theme.scales[role][shade]);
           continue;
         }

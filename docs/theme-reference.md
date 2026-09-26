@@ -7,7 +7,9 @@ steps, see [Use an exported theme](use-a-theme.md).
 
 **Color character** changes the `mood` and `depth` parameters together. Quiet
 colors are lighter and less intense. Expressive colors are deeper and more
-intense. **Paper warmth** changes the canvas and neutral tint independently.
+intense. **Paper warmth** gives the canvas and neutral surfaces a shared warm
+undertone, independent of the brand hue. Light hover and selected surfaces retain
+that undertone while changing lightness; dark neutrals use a reduced warm tint.
 Gamut fitting and contrast checks run automatically.
 
 ## Color scales and modes
@@ -16,8 +18,10 @@ The export contains seven color scales: primary, secondary, success, info,
 warning, error, and neutral. Each scale has shades from 50 to 950.
 
 The success, info, warning, and error shades from 600 to 950 are individually
-fitted to sRGB. Primary, secondary, and neutral use ramps mixed from a base color
-with white or black.
+fitted to sRGB. Primary and secondary use ramps mixed from a base color with white
+or black. Neutral shades are individually fitted OKLCH colors anchored to the
+paper hue and chroma. In light mode, muted, elevated, and accented surfaces step
+down in lightness from the canvas without mixing away its warmth.
 
 The stylesheet defines light-mode tokens under `:root` and `.light`, and dark-mode
 tokens under `.dark`. It also includes radius, focus offset, and typography.

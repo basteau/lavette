@@ -56,7 +56,7 @@ function seed(l: number, requestedC: number, h: number): Oklch {
   }
   return { mode: "oklch", l: round(l), c: Math.floor(lo * 0.998 * 1e6) / 1e6, h: round(wrap(h)) };
 }
-// Fit each status shade independently: darkness need not remove its identity.
+// Fit an individual color by reducing chroma while preserving lightness and hue.
 function fitColor(l: number, c: number, h: number): Oklch {
   let lo = 0, hi = c;
   for (let i = 0; i < 22; i++) {
@@ -65,6 +65,15 @@ function fitColor(l: number, c: number, h: number): Oklch {
     else hi = mid;
   }
   return { mode: "oklch", l: round(l), c: Math.floor(lo * 0.998 * 1e6) / 1e6, h };
+}
+const PAPER_SURFACE_OFFSETS: Partial<Record<Shade, number>> = { 50: 0.012, 100: 0.035, 200: 0.065 };
+function neutralShade(base: Oklch, paper: Oklch, shade: Shade): Oklch {
+  if (shade === 500) return base;
+  // Light surfaces retain paper's undertone instead of bleaching it with white.
+  // Dark shades taper chroma with lightness to stay restrained.
+  const offset = PAPER_SURFACE_OFFSETS[shade];
+  const l = offset === undefined ? mixShade(base, shade).l : paper.l - offset;
+  return fitColor(l, paper.c * Math.min(1, l / base.l), paper.h!);
 }
 function lightestPassing(make: (l: number) => Oklch, maxL: number, passes: (c: Oklch) => boolean): Oklch {
   let lo = 0.15, hi = maxL;
@@ -85,7 +94,7 @@ export function composite(fg: Oklch, bg: Oklch, opacity: number) {
 }
 
 export function generateTheme(values: PaletteValues, colors: Palette["colors"]): Theme {
-  const { mood, depth, paperWarmth } = values;
+  const { mood, depth } = values;
   const l = 0.66 - depth * 0.0006;
   const c = 0.075 + mood * 0.0011;
   const primaryHue = colors.accent.h!;
@@ -101,7 +110,7 @@ export function generateTheme(values: PaletteValues, colors: Palette["colors"]):
     info: seed(0.66 - statusDepth, 0.18 + mood * 0.0002, STATUS_HUES.info),
     warning: seed(0.76 - statusDepth, 0.15 + mood * 0.0001, STATUS_HUES.warning),
     error: seed(0.64 - statusDepth, 0.21 + mood * 0.0002, STATUS_HUES.error),
-    neutral: seed(0.58, 0.004 + paperWarmth * 0.00016, colors.ink.h!),
+    neutral: fitColor(0.58, colors.canvas.c, colors.canvas.h!),
   };
   const scales = {} as Theme["scales"];
   const tokens: Tokens = {
@@ -117,10 +126,12 @@ export function generateTheme(values: PaletteValues, colors: Palette["colors"]):
     for (const [i, shade] of SHADES.entries()) {
       const base = seeds[role];
       const independent = isStatus(role) && shade > 500;
-      scales[role][shade] = independent
+      scales[role][shade] = role === "neutral"
+        ? neutralShade(base, colors.canvas, shade)
+        : independent
         ? fitColor(base.l * weights[i] / 100, base.c * [1, 0.92, 0.8, 0.65, 0.5][i - 6], base.h!)
         : mixShade(base, shade);
-      tokens[`--ui-color-${role}-${shade}`] = independent ? fmt(scales[role][shade]) : shade === 500 ? fmt(seeds[role])
+      tokens[`--ui-color-${role}-${shade}`] = role === "neutral" || independent ? fmt(scales[role][shade]) : shade === 500 ? fmt(seeds[role])
         : `color-mix(in oklab, var(--ui-color-${role}-500) ${weights[i]}%, ${shade < 500 ? "white" : "black"})`;
     }
   }
