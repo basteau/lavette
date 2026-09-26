@@ -2,7 +2,7 @@ import { strToU8, zipSync } from 'fflate';
 import { fontAssets, fontPairing } from './fonts';
 import { exportCSS, type Palette } from './palette';
 
-export function installationGuide(palette: Palette): string {
+function installationGuide(palette: Palette): string {
   return `# Your Lavette theme
 
 For an existing Nuxt or Vue / Vite project with Nuxt UI 4 and Tailwind CSS 4.
@@ -19,16 +19,17 @@ Pairing: ${fontPairing(palette.values.fontPairing).name}.
 @import "./lavette-theme.css";
 \`\`\`
 
-In Nuxt, register your main stylesheet in nuxt.config.ts (for example css: ['~/assets/css/main.css']). Nuxt 4 normally places it in app/assets/css; Nuxt 3 normally uses assets/css.
-In Vue / Vite, import your main stylesheet in your application entry point.
+Your main stylesheet should already be loaded by your app: through the css option
+in nuxt.config.ts for Nuxt, or an import in your entry point for Vue / Vite.
 
-4. Keep your existing UApp wrapper. Toggle the .dark class on the html element to change modes, using Nuxt Color Mode if your app already has it.
+Keep the complete theme CSS and your existing UApp wrapper. No additional
+configuration is needed; your app's component sizes continue to apply.
+If your app uses a subpath, adjust the /fonts/ URLs in the CSS.
 
-Nuxt UI's default control sizes are preserved. No theme configuration file is needed.
-The stylesheet supplies all seven color ramps; no ui.colors mapping is needed.
-Existing custom CSS or inline styles can override the theme. Check your own components in both modes.
-Keep the complete stylesheet: its status treatments include readable fills and hover states.
-Fonts use /fonts/ URLs. Adjust those URLs if you deploy under a subpath.
+## Dark mode
+
+Toggle the .dark class on the html element, using Nuxt Color Mode if installed.
+Check your components in both modes, including hover and keyboard focus states.
 
 ## Display headings
 
@@ -38,9 +39,6 @@ Body text and controls use the selected sans font. Opt into the display font:
 <h1 class="font-display font-normal leading-display tracking-normal">Your next chapter</h1>
 \`\`\`
 
-## Contrast
-
-Contrast checks cover generated color pairs and supported states, not whole-site accessibility.
 `;
 }
 

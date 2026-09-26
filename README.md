@@ -21,13 +21,13 @@ pnpm dev
 ```
 
 Open the local URL printed by Vite. Use **Save** to keep a theme in this browser
-or **Export theme** to download one ZIP with CSS, size configuration, fonts, licenses,
+or **Export theme** to download one ZIP with CSS, fonts, licenses,
 and installation instructions. Your current design is restored when you reload.
 
 ## Use your theme
 
 Follow [Use an exported theme](docs/use-a-theme.md) to add the export to an
-existing Nuxt UI app. The guide covers CSS import order, fonts, control sizes,
+existing Nuxt UI app. The guide covers CSS import order, fonts,
 and dark mode.
 
 See the [theme reference](docs/theme-reference.md) for palette controls, status

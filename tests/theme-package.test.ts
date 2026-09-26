@@ -14,13 +14,18 @@ it('ships complete, independently extractable themes for every font pairing', as
     ));
     const css = strFromU8(files['lavette-theme.css']);
     assert.equal(css, exportCSS(palette));
-    assert.deepEqual(Object.keys(files).filter(path => !path.startsWith('public/fonts/')).sort(), ['README.md', 'lavette-theme.css']);
+    const expectedFiles = ['README.md', 'lavette-theme.css', ...new Set(fontAssets(pair.id).flatMap(asset => [
+      `public/fonts/${asset.file}`, `public/fonts/${asset.license}`,
+    ]))];
+    assert.deepEqual(Object.keys(files).sort(), expectedFiles.sort());
     for (const asset of fontAssets(pair.id)) {
       assert.ok(files[`public/fonts/${asset.file}`].length > 100);
       assert.match(strFromU8(files[`public/fonts/${asset.license}`]), /OPEN FONT LICENSE/i);
     }
     for (const match of css.matchAll(/url\("\/([^" ]+)"\)/g)) assert.ok(files[`public/${match[1]}`], match[1]);
-    assert.match(strFromU8(files['README.md']), /Nuxt UI's default control sizes are preserved/);
+    const guide = strFromU8(files['README.md']);
+    assert.match(guide, /@import "\.\/lavette-theme\.css"/);
+    assert.doesNotMatch(guide, /lavette-ui\.config|lavette-theme\.json|size configuration/);
   }
 });
 

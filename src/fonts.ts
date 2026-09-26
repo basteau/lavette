@@ -55,7 +55,6 @@ function renderFontFaces(selected: ReturnType<typeof fontAssets>): string {
 export function typographyTokens(id: unknown): Record<"--leading-display", string> {
   return { "--leading-display": String(fontPairing(id).displayLeading) };
 }
-export const DISPLAY_CLASSES = "font-display font-normal leading-display tracking-normal";
 
 export function fontFaces(id: unknown): string {
   return renderFontFaces(fontAssets(id));

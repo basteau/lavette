@@ -404,15 +404,17 @@ async function downloadPackage() {
             <li><span>2</span><div>Import your theme.<small>Add this after your Tailwind CSS and Nuxt UI imports.</small></div></li>
           </ol>
           <pre class="code-block">@import "./lavette-theme.css";</pre>
-          <p class="text-sm text-muted">Your existing components pick up the colors and body font automatically. Nuxt UI’s default control sizes are preserved.</p>
+          <p class="text-sm text-muted">Your existing components pick up the colors and body font automatically.</p>
           <UAlert v-if="exportError" color="error" variant="soft" :title="exportError" />
           <details class="control-details">
             <summary>Only need the code?</summary>
-            <div class="flex flex-wrap gap-2 pt-4">
-              <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(exportCSS(palette))">Copy CSS</UButton>
-              <UButton icon="i-lucide-download" color="neutral" variant="outline" @click="download">Download CSS</UButton>
+            <div class="flex flex-col gap-1.5 pt-2">
+              <div class="flex flex-wrap gap-2">
+                <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(exportCSS(palette))">Copy CSS</UButton>
+                <UButton icon="i-lucide-download" color="neutral" variant="outline" @click="download">Download CSS</UButton>
+              </div>
+              <p class="text-sm text-muted leading-relaxed">Copy the fonts from the ZIP into public/fonts when using CSS alone.</p>
             </div>
-            <p class="text-sm text-muted mt-3">CSS alone requires the fonts from the ZIP in public/fonts.</p>
           </details>
         </div>
       </template>
