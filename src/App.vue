@@ -71,11 +71,9 @@ const core = computed(() =>
   corePaletteColors(palette.value, dark.value ? "dark" : "light"),
 );
 const pair = computed(() => fontPairing(values.value.fontPairing));
-const isSaved = computed(() =>
-  saved.value.some(
-    (s) => JSON.stringify(s.values) === JSON.stringify(values.value),
-  ),
-);
+const sameValues = (a: PaletteValues, b: PaletteValues) =>
+  JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
+const isSaved = computed(() => saved.value.some((s) => sameValues(s.values, values.value)));
 function shuffle() {
   values.value = randomValues(values.value);
 }
@@ -100,19 +98,30 @@ function save() {
   notify("Theme saved.");
   persist();
 }
-const removed = ref<Saved>();
 function remove(entry: Saved) {
-  removed.value = entry;
+  const index = saved.value.findIndex((s) => s.id === entry.id);
   saved.value = saved.value.filter((s) => s.id !== entry.id);
   persist();
+  toast.add({
+    id: "theme-removed",
+    title: "Theme removed.",
+    duration: 5000,
+    actions: [{
+      label: "Undo",
+      color: "neutral",
+      variant: "outline",
+      onClick: () => {
+        if (saved.value.some((s) => sameValues(s.values, entry.values))) return;
+        if (saved.value.length >= 8) return notify("Your collection is full. Remove a theme before restoring another.", 0);
+        saved.value.splice(Math.min(index, saved.value.length), 0, entry);
+        persist();
+      },
+    }],
+  });
 }
-function undo() {
-  if (removed.value && saved.value.length < 8) {
-    saved.value.push(removed.value);
-    removed.value = undefined;
-    persist();
-  }
-}
+const savedSwatches = computed(() =>
+  Object.fromEntries(saved.value.map((entry) => [entry.id, corePaletteColors(generatePalette(entry.values), "light")])),
+);
 async function copy(text: string) {
   try {
     await navigator.clipboard.writeText(text);
@@ -329,23 +338,22 @@ function download() {
             :key="entry.id"
             class="flex items-center gap-3"
           >
-            <span
-              class="saved-dot"
-              :style="{
-                background: format(
-                  generatePalette(entry.values).theme.roles.light.primary,
-                ),
-              }"
-            /><UButton
+            <UButton
               color="neutral"
               variant="ghost"
-              class="flex-1"
+              class="flex-1 gap-3"
               @click="
                 values = { ...entry.values };
                 collection = false;
               "
-              >{{ fontPairing(entry.values.fontPairing).name }} ·
-              {{ entry.values.harmony }} · {{ entry.values.hue }}°</UButton
+              ><span class="saved-swatches" aria-hidden="true"
+                ><span
+                  v-for="c in savedSwatches[entry.id]"
+                  :key="c.label"
+                  :style="{ background: format(c.color) }" /></span
+              ><span class="truncate capitalize">{{
+                `${fontPairing(entry.values.fontPairing).name} · ${entry.values.harmony} · ${entry.values.hue}°`
+              }}</span></UButton
             ><UButton
               icon="i-lucide-trash-2"
               color="neutral"
@@ -354,9 +362,6 @@ function download() {
               @click="remove(entry)"
             />
           </div>
-          <UButton v-if="removed" variant="soft" @click="undo"
-            >Undo removal</UButton
-          >
         </div></template
       ></UModal
     >

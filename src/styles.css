@@ -614,11 +614,14 @@ p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.saved-dot {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.saved-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 12px);
+  height: 28px;
   flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: var(--ui-radius);
 }
 .field-note h2 {
   font-family: var(--font-display);
