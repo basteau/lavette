@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import { describe, it } from "node:test";
-import { FONT_PAIRINGS, fontAssets, fontSizeAdjust, allFontFaces } from "../src/fonts";
-import assets from "../src/font-assets.json" with { type: "json" };
+import { FONT_PAIRINGS, fontFacesForPairing, fontSizeAdjust, allFontFaces, loadFontPairing } from "../src/fonts";
+import googleFonts from "../src/google-fonts.json" with { type: "json" };
 import { exportCSS, generatePalette, normalize } from "../src/palette";
 
 describe("font pairing export", () => {
@@ -33,31 +31,61 @@ describe("font pairing export", () => {
     assert.equal(fontSizeAdjust("Geist Mono"), 100);
   });
 
-  it("exports only selected families, real styles, and existing licensed files", () => {
+  it("exports only selected Google-hosted families with the complete style and subset declarations", () => {
+    const all = allFontFaces();
     for (const pair of FONT_PAIRINGS) {
-      const palette = generatePalette({ fontPairing: pair.id });
-      const css = exportCSS(palette);
+      const css = exportCSS(generatePalette({ fontPairing: pair.id }));
       assert.ok(css.includes(`--font-sans: "${pair.sans}"`));
-      assert.ok(css.includes(`--font-serif: "${pair.serif}"`));
       assert.ok(css.includes(`--font-display: "${pair.serif}"`));
       assert.ok(css.includes(`--leading-display: ${pair.displayLeading};`));
-      assert.doesNotMatch(css, /--tracking-|--text-(?:base|sm|lg)|line-height:|letter-spacing:/);
-      for (const asset of fontAssets(pair.id)) {
-        assert.ok(css.includes(`src: url("/fonts/${asset.file}") format("woff2")`));
-        assert.ok(css.includes(`font-weight: ${asset.weight};\n  font-style: ${asset.style};`));
-        assert.ok(css.includes(`size-adjust: ${fontSizeAdjust(asset.family)}%;`));
-        assert.ok(allFontFaces().includes(`size-adjust: ${fontSizeAdjust(asset.family)}%;`));
-        assert.equal(readFileSync(new URL(`../public/fonts/${asset.file}`, import.meta.url)).subarray(0, 4).toString(), "wOF2");
-        assert.match(readFileSync(new URL(`../public/fonts/${asset.license}`, import.meta.url), "utf8"), /SIL OPEN FONT LICENSE/);
+      assert.doesNotMatch(css, /url\("\/fonts\/|@import url|--text-(?:base|sm|lg)|letter-spacing:/);
+      const selected = fontFacesForPairing(pair.id);
+      assert.deepEqual([...new Set(selected.map(f => f.family))].sort(), [pair.sans, pair.serif, "Geist Mono"].sort());
+      for (const face of selected) {
+        assert.equal(new URL(face.url).origin, "https://fonts.gstatic.com");
+        assert.ok(face.url.endsWith(".woff2"));
+        assert.ok(css.includes(`src: url("${face.url}") format("woff2")`));
+        assert.ok(css.includes(`font-weight: ${face.weight};\n  font-style: ${face.style};`));
+        assert.ok(css.includes(`size-adjust: ${fontSizeAdjust(face.family)}%;`));
+        assert.ok(css.includes(`unicode-range: ${face.unicodeRange};`));
+        assert.ok(all.includes(`src: url("${face.url}")`));
       }
       for (const other of FONT_PAIRINGS.filter(other => other.id !== pair.id)) {
         assert.ok(!css.includes(`font-family: "${other.sans}"`));
         assert.ok(!css.includes(`font-family: "${other.serif}"`));
       }
+      if (pair.id === "geist") assert.match(css, /font-variation-settings: "ELSH" 1/);
     }
-    for (const asset of assets) {
-      const bytes = readFileSync(new URL(`../public/fonts/${asset.file}`, import.meta.url));
-      assert.equal(createHash("sha256").update(bytes).digest("hex"), asset.sha256);
+  });
+
+  it("retains real italics, weight ranges, optical sizes and Unicode subsets", () => {
+    const expected = {
+      Fraunces: "100 900", "DM Sans": "100 1000", Newsreader: "200 800", Manrope: "200 800",
+      "Instrument Serif": "400", "Instrument Sans": "400 700", Alegreya: "400 900",
+      "Source Serif 4": "200 900", "Source Sans 3": "200 900", Geist: "100 900", "Geist Mono": "400 600",
+      "Geist Pixel Square": "400", "Alegreya Sans": "100|300|400|500|700|800|900",
+    };
+    for (const group of googleFonts) {
+      const family = group.faces[0].family as keyof typeof expected;
+      const weights = [...new Set(group.faces.map(f => f.weight))].sort().join("|");
+      assert.equal(weights, expected[family]);
+      const styles = [...new Set(group.faces.map(f => f.style))].sort();
+      assert.deepEqual(styles, ["Manrope", "Geist Mono", "Geist Pixel Square"].includes(family) ? ["normal"] : ["italic", "normal"]);
+      assert.ok(group.faces.some(f => f.unicodeRange.includes("U+0000-00FF")));
+      assert.ok(group.faces.some(f => f.unicodeRange.includes("U+0100")));
+      if (["Fraunces", "DM Sans", "Newsreader", "Source Serif 4"].includes(family)) {
+        assert.ok(new URL(group.source).searchParams.get("family")!.includes("opsz"));
+      }
     }
+  });
+
+  it("warms styles once across subsets and bounds failed or stalled font loads", async () => {
+    const requests: string[] = [];
+    await loadFontPairing("studio", { load: async request => { requests.push(request); return [{} as FontFace]; } });
+    assert.equal(requests.length, new Set(requests).size);
+    assert.equal(requests.length, 5); // two styles per family, plus mono
+    await assert.rejects(loadFontPairing("studio", { load: async () => [] }), /unavailable/);
+    await assert.rejects(loadFontPairing("studio", { load: async () => { throw new Error("offline"); } }), /offline/);
+    await assert.rejects(loadFontPairing("studio", { load: () => new Promise(() => {}) }, 5), /timed out/);
   });
 });

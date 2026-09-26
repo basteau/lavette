@@ -1,23 +1,11 @@
 # Use an exported theme
 
-Add a Lavette theme to an existing app with Nuxt UI 4 and Tailwind CSS 4 installed.
-The export supports both Nuxt and Vue with Vite.
+For an existing app with Nuxt UI 4 and Tailwind CSS 4 installed. The same CSS
+works in Nuxt and Vue with Vite.
 
-## Download the theme
-
-1. In the studio, select **Export theme**.
-2. Select **Download theme ZIP** and unzip it.
-3. Copy `lavette-theme.css` beside your main stylesheet and merge the included
-   `public/fonts/` folder into your project. All selected fonts and licenses are included.
-4. Import the CSS as described below or in the included `README.md`.
-
-The ZIP contains the CSS, fonts, licenses, and installation instructions.
-The **Only need the code?** section lets you copy or download the CSS separately.
-
-## Import the CSS
-
-1. Place `lavette-theme.css` next to your app's main CSS file.
-2. Import it after Tailwind CSS and Nuxt UI:
+1. Select **Export theme**, then **Download CSS** or **Copy CSS**.
+2. Save it as `lavette-theme.css` beside your app's main stylesheet.
+3. Import it after Tailwind CSS and Nuxt UI:
 
    ```css
    @import "tailwindcss";
@@ -25,36 +13,29 @@ The **Only need the code?** section lets you copy or download the CSS separately
    @import "./lavette-theme.css";
    ```
 
-Keep the complete stylesheet. It contains rules for Nuxt UI status colors as
-well as color tokens. Removing those rules changes fills, labels, and hover
-states. See [status colors](theme-reference.md#status-colors) for the token details.
+Your main stylesheet should already be loaded through Nuxt's `css` option or
+an import in your Vue/Vite entry point. Keep your existing `UApp` wrapper.
+No additional configuration or local font files are needed. Existing component
+sizes continue to apply.
 
-The export supplies all seven color scales. You do not need an `app.config.ts`
-color mapping. Nuxt UI’s default control sizes are preserved.
+## Fonts and headings
 
-## Add the fonts
+The CSS loads the selected pairing and Geist Mono directly from Google's font
+servers. It includes the same size adjustments used in the preview. Fallback
+fonts display while loading or if Google is unavailable. If your app has a
+Content Security Policy, allow `https://fonts.gstatic.com` in `font-src`.
 
-1. Copy the included font files and their OFL licenses into your app's
-   `public/fonts/` directory.
-2. If your app serves assets from a different base path, update the `/fonts/`
-   URLs in `lavette-theme.css`.
-3. To use the selected display font for a heading, add these classes:
+Body text and controls use the selected sans font. For display headings, add:
 
-   ```html
-   <h1 class="font-display font-normal leading-display tracking-normal">
-   	Your page title
-   </h1>
-   ```
+```html
+<h1 class="font-display font-normal leading-display tracking-normal">
+  Your page title
+</h1>
+```
 
-## Check the result
+## Dark mode
 
-1. View a heading, body text, and a button to check that the selected fonts load.
-2. Add `.dark` to the root `<html>` element to check dark mode. In Nuxt, use
-   Nuxt Color Mode to manage that class if your app already uses it.
-3. Remove `.dark` to return to light mode.
-4. Check your custom components in both modes, including hover and keyboard
-   focus states.
-
-The export checks specific foreground and background pairs, not every possible
-component combination. See [contrast targets](theme-reference.md#contrast-targets)
-for the limits of those checks.
+Toggle `.dark` on the root `<html>` element, using Nuxt Color Mode if installed.
+Check custom components in both modes, including hover and keyboard focus.
+Keep the complete CSS: its semantic utility rules provide the intended status
+fills, labels, and hover states alongside the color tokens.

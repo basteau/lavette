@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="font-src 'none'">
+  <title>Lavette · blocked-font recovery</title>
+</head>
+<body>
+  <!-- Run through the studio dev server. Every remote font is deliberately blocked. -->
+  <div id="app"></div>
+  <output id="export-status" aria-live="polite">No CSS download captured yet.</output>
+  <script type="module">
+    import '/src/main.ts';
+    // Observe the real download handler without replacing the exported content.
+    const createObjectURL = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = blob => {
+      if (blob instanceof Blob && blob.type === 'text/css') {
+        blob.text().then(css => {
+          document.querySelector('#export-status').textContent = JSON.stringify({
+            bytes: css.length,
+            font: /--font-sans: ([^;]+)/.exec(css)?.[1],
+            hostedFonts: css.includes('https://fonts.gstatic.com/'),
+            localFonts: css.includes('url("/fonts/'),
+            dark: css.includes('.dark {'),
+          });
+        });
+      }
+      return createObjectURL(blob);
+    };
+  </script>
+</body>
+</html>

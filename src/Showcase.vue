@@ -141,7 +141,7 @@ const faq = [
   {
     label: "How do I use this theme in my project?",
     content:
-      "Download the theme ZIP, copy the included fonts folder, and import the CSS after Tailwind CSS and Nuxt UI. Follow the included README for your project’s configuration.",
+      "Download or copy the theme CSS and import it after Tailwind CSS and Nuxt UI. Your selected fonts load from Google automatically.",
   },
 ];
 const surfaceTokens = [
@@ -254,7 +254,7 @@ const passes = computed(() =>
           </div>
         </div>
         <div class="flex gap-2 mt-7">
-          <UBadge color="neutral" variant="soft">Self-hosted fonts</UBadge
+          <UBadge color="neutral" variant="soft">Google Fonts</UBadge
           ><UBadge color="neutral" variant="soft">Open Font License</UBadge>
         </div>
       </div>

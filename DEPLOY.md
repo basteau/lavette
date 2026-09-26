@@ -32,7 +32,7 @@ ssh -o HostKeyAlias=exe.dev lavette.exe.xyz 'systemctl is-active nginx'
 ssh exe.dev share show lavette
 ```
 
-Open the site in a browser and confirm the theme controls and ZIP export work.
+Open the site in a browser and confirm the theme controls and CSS export work.
 The response must be Lavette itself, not an exe.dev login page.
 
 ## Initial provisioning (already completed)

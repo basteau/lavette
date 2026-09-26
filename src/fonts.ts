@@ -1,4 +1,6 @@
-import assets from "./font-assets.json" with { type: "json" };
+import googleFonts from "./google-fonts.json" with { type: "json" };
+
+const faces = googleFonts.flatMap(family => family.faces);
 
 export const FONT_PAIRINGS = [
   { id: "geist", sansAdjust: 99.2, displayAdjust: 97, name: "Geist", serif: "Geist Pixel Square", sans: "Geist", displayLeading: 1.25, description: "Pixel-built headlines with the clean, precise Geist interface family." },
@@ -10,7 +12,7 @@ export const FONT_PAIRINGS = [
 ] as const;
 /** Normalize the font faces, not individual components or Tailwind's size scale.
  * Sans faces target DM Sans's 0.526em x-height; display faces target Fraunces's
- * 0.700em cap height. Values come from the bundled fonts' OS/2 metrics and are
+ * 0.700em cap height. Values were verified against Google-hosted fonts' OS/2 metrics and are
  * rounded to 0.1%. Keep each family's real weight/italic and natural proportions.
  * https://www.w3.org/TR/css-fonts-5/#descdef-font-face-size-adjust
  */
@@ -22,10 +24,9 @@ export const DEFAULT_FONT_PAIRING = "studio";
 export function fontPairing(id: unknown) {
   return FONT_PAIRINGS.find(pair => pair.id === id) ?? FONT_PAIRINGS.find(pair => pair.id === DEFAULT_FONT_PAIRING)!;
 }
-const mono = { family: "Geist Mono", file: "geist-mono-normal.woff2", weight: "400 600", style: "normal", license: "geistmono-OFL.txt" };
-export function fontAssets(id: unknown) {
+export function fontFacesForPairing(id: unknown) {
   const pair = fontPairing(id);
-  return [...assets.filter(asset => asset.family === pair.sans || asset.family === pair.serif), mono];
+  return faces.filter(face => [pair.sans, pair.serif, "Geist Mono"].includes(face.family));
 }
 export function fontTokens(id: unknown): Record<`--font-${string}`, string> {
   const pair = fontPairing(id);
@@ -36,14 +37,15 @@ export function fontTokens(id: unknown): Record<`--font-${string}`, string> {
     "--font-mono": '"Geist Mono", monospace',
   };
 }
-function renderFontFaces(selected: ReturnType<typeof fontAssets>): string {
-  return selected.map(asset => `@font-face {
-  font-family: "${asset.family}";
-  src: url("/fonts/${asset.file}") format("${asset.file.endsWith('.woff2') ? 'woff2' : 'truetype'}");
-  font-weight: ${asset.weight};
-  font-style: ${asset.style};
+function renderFontFaces(selected: ReturnType<typeof fontFacesForPairing>): string {
+  return selected.map(face => `@font-face {
+  font-family: "${face.family}";
+  src: url("${face.url}") format("woff2");
+  font-weight: ${face.weight};
+  font-style: ${face.style};
   font-display: swap;
-  size-adjust: ${fontSizeAdjust(asset.family)}%;
+  size-adjust: ${fontSizeAdjust(face.family)}%;${face.family === "Geist Pixel Square" ? '\n  font-variation-settings: "ELSH" 1;' : ""}
+  unicode-range: ${face.unicodeRange};
 }`).join("\n\n");
 }
 
@@ -57,16 +59,36 @@ export function typographyTokens(id: unknown): Record<"--leading-display", strin
 }
 
 export function fontFaces(id: unknown): string {
-  return renderFontFaces(fontAssets(id));
+  return renderFontFaces(fontFacesForPairing(id));
 }
 
 // Register once; changing a color must never detach loaded FontFace objects.
 export function allFontFaces(): string {
-  return renderFontFaces([...assets, mono]);
+  return renderFontFaces(faces);
 }
 
-export async function loadFontPairing(id: unknown): Promise<void> {
-  await Promise.all(fontAssets(id).map(asset =>
-    document.fonts.load(`${asset.style} ${asset.weight.split(" ")[0]} 16px "${asset.family}"`),
-  ));
+/** Warm the selected styles without delaying editing or export. Only Latin faces are
+ * preloaded; the browser fetches other Unicode subsets when the page needs them. */
+export async function loadFontPairing(
+  id: unknown,
+  fontSet: Pick<FontFaceSet, "load"> = document.fonts,
+  timeoutMs = 8000,
+): Promise<void> {
+  const requests = [...new Set(fontFacesForPairing(id).map(face =>
+    `${face.style} ${face.weight.split(" ")[0]} 16px "${face.family}"`,
+  ))];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      Promise.all(requests.map(async request => {
+        const loaded = await fontSet.load(request, "BESbswy");
+        if (!loaded.length) throw new Error("Font face unavailable");
+      })),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Font loading timed out")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }

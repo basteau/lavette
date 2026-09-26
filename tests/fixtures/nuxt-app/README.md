@@ -1,8 +1,8 @@
 # Nuxt integration smoke test
 
-This fixture builds a real Nuxt 4 application from the ZIP exporter. It extracts
-only the emitted CSS and fonts, using no studio styles or UTheme
-preview overrides. Generated files are ignored by Git.
+This fixture builds a real Nuxt 4 application from the CSS exporter. It uses
+Google-hosted fonts and no studio styles or preview overrides. Generated files
+are ignored by Git.
 
 From the repository root:
 

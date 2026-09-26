@@ -21,7 +21,7 @@ The presets cover the default theme, quiet tonal colors with warm paper,
 saturated tonal colors, and saturated soft colors with warm paper. The page
 shows the exact input for the selected preset.
 
-Both `build` and `dev` regenerate the theme CSS and copy the fonts. Git ignores
+Both `build` and `dev` regenerate the theme CSS with Google-hosted fonts. Git ignores
 these generated files.
 
 ## Check each preset

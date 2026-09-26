@@ -34,6 +34,7 @@
     <h1>Font pairing size comparison</h1>
     <p>Original and normalized faces at identical CSS sizes: 36px headings, 16px body, and 14px supporting text and controls. Normalization aligns body x-height and display cap height while preserving each family’s proportions.</p>
     <button id="spacing" type="button" aria-pressed="false">Test user text spacing</button>
+    <output id="font-status" aria-live="polite">Loading Google-hosted fonts…</output>
     <div id="pairs"></div>
   </main>
   <script type="module">
@@ -72,6 +73,16 @@
       document.fonts.load(`16px "${family}"`),
       document.fonts.load(`16px "Original ${family}"`),
     ])));
+    await document.fonts.ready;
+    const loaded = [...document.fonts].filter(face => face.status === 'loaded');
+    const failed = [...document.fonts].filter(face => face.status === 'error');
+    document.querySelector('#font-status').textContent = JSON.stringify({
+      loaded: [...new Set(loaded.map(face => face.family))],
+      failed: failed.map(face => face.family),
+      pixel: loaded.filter(face => face.family.includes('Geist Pixel')).map(face => ({
+        family: face.family, variation: face.variationSettings, sizeAdjust: face.sizeAdjust,
+      })),
+    });
     document.documentElement.dataset.fontsReady = 'true';
   </script>
 </body>

@@ -22,8 +22,7 @@ try {
 watch(values, value => {
   try { localStorage.setItem(draftKey, JSON.stringify(value)); } catch { /* Collection saves report storage errors. */ }
 }, { deep: true });
-const appliedFontPairing = ref(values.value.fontPairing);
-const palette = computed(() => generatePalette({ ...values.value, fontPairing: appliedFontPairing.value }));
+const palette = computed(() => generatePalette(values.value));
 const dark = ref(false);
 const settings = ref(false);
 const collection = ref(false);
@@ -54,11 +53,9 @@ watch(() => values.value.fontPairing, async (id, _, onCleanup) => {
   onCleanup(() => { stale = true; });
   try {
     await loadFontPairing(id);
-    if (!stale) appliedFontPairing.value = id;
   } catch {
     if (!stale) {
-      values.value.fontPairing = appliedFontPairing.value;
-      notify("Could not load this font pairing. Please try again.", 0);
+      notify("Google Fonts is unavailable. Using fallback fonts; your theme is still ready to export.", 0);
     }
   }
 }, { immediate: true });
@@ -73,7 +70,7 @@ watchEffect(() => {
 const core = computed(() =>
   corePaletteColors(palette.value, dark.value ? "dark" : "light"),
 );
-const pair = computed(() => fontPairing(appliedFontPairing.value));
+const pair = computed(() => fontPairing(values.value.fontPairing));
 const isSaved = computed(() =>
   saved.value.some(
     (s) => JSON.stringify(s.values) === JSON.stringify(values.value),
@@ -138,28 +135,6 @@ function downloadFile(content: BlobPart, filename: string, type = "text/plain") 
 }
 function download() {
   downloadFile(exportCSS(palette.value), "lavette-theme.css", "text/css");
-}
-const packaging = ref(false);
-const exportError = ref("");
-async function downloadPackage() {
-  packaging.value = true;
-  exportError.value = "";
-  // Snapshot the preview before asynchronous asset loading.
-  const current = palette.value;
-  try {
-    const { createThemePackage } = await import("./theme-package");
-    const bytes = await createThemePackage(current, async path => {
-      const response = await fetch(`${import.meta.env.BASE_URL}${path}`, { signal: AbortSignal.timeout(15000) });
-      if (!response.ok || response.headers.get("content-type")?.includes("text/html")) throw new Error(`Missing asset: ${path}`);
-      return new Uint8Array(await response.arrayBuffer());
-    });
-    downloadFile(new Uint8Array(bytes), "lavette-theme.zip", "application/zip");
-    notify("Theme package ready. Follow the included README to install it.");
-  } catch {
-    exportError.value = "Could not prepare the complete theme. Check your connection and try again.";
-  } finally {
-    packaging.value = false;
-  }
 }
 </script>
 <template>
@@ -395,31 +370,17 @@ async function downloadPackage() {
           <div class="export-preview">
             <span v-for="c in core" :key="c.label" :style="{ background: format(c.color) }" />
           </div>
-          <div>
-            <h3 class="font-medium">{{ pair.name }}</h3>
-            <p class="text-sm text-muted mt-1">Light and dark themes, fonts, licenses, and setup instructions. One download.</p>
-          </div>
-          <ol class="install-steps">
-            <li><span>1</span><div>Unzip and copy the files.<small>Place the CSS beside your main stylesheet and merge public/fonts into your project.</small></div></li>
-            <li><span>2</span><div>Import your theme.<small>Add this after your Tailwind CSS and Nuxt UI imports.</small></div></li>
-          </ol>
+          <p class="text-sm text-muted">{{ pair.name }} fonts and your light and dark theme, in one CSS file.</p>
+          <p class="text-sm">Save as <code>lavette-theme.css</code> beside your main stylesheet. Import it after Tailwind CSS and Nuxt UI:</p>
           <pre class="code-block">@import "./lavette-theme.css";</pre>
-          <p class="text-sm text-muted">Your existing components pick up the colors and body font automatically.</p>
-          <UAlert v-if="exportError" color="error" variant="soft" :title="exportError" />
-          <details class="control-details">
-            <summary>Only need the code?</summary>
-            <div class="flex flex-col gap-1.5 pt-2">
-              <div class="flex flex-wrap gap-2">
-                <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(exportCSS(palette))">Copy CSS</UButton>
-                <UButton icon="i-lucide-download" color="neutral" variant="outline" @click="download">Download CSS</UButton>
-              </div>
-              <p class="text-sm text-muted leading-relaxed">Copy the fonts from the ZIP into public/fonts when using CSS alone.</p>
-            </div>
-          </details>
+          <p class="text-sm text-muted">Fonts load from Google. Fallback fonts are used if Google is unavailable.</p>
         </div>
       </template>
       <template #footer>
-        <UButton icon="i-lucide-download" block size="lg" :loading="packaging" :disabled="values.fontPairing !== appliedFontPairing" @click="downloadPackage">Download theme ZIP</UButton>
+        <div class="flex flex-wrap gap-2 w-full">
+          <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(exportCSS(palette))">Copy CSS</UButton>
+          <UButton icon="i-lucide-download" @click="download">Download CSS</UButton>
+        </div>
       </template>
     </UModal>
     <UModal

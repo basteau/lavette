@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { exportCSS, generatePalette } from "../../../src/palette";
 import { presets } from "./presets";
 
@@ -7,5 +7,5 @@ mkdirSync(new URL("./public/themes/", import.meta.url), { recursive: true });
 for (const [name, values] of Object.entries(presets)) {
   writeFileSync(new URL(`./public/themes/${name}.css`, import.meta.url), exportCSS(generatePalette(values)));
 }
-mkdirSync(new URL("./public/fonts/", import.meta.url), { recursive: true });
-cpSync(new URL("../../../public/fonts/", import.meta.url), new URL("./public/fonts/", import.meta.url), { recursive: true });
+// Clean the previous local-font fixture output.
+rmSync(new URL("./public/fonts/", import.meta.url), { recursive: true, force: true });

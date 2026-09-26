@@ -21,8 +21,7 @@ pnpm dev
 ```
 
 Open the local URL printed by Vite. Use **Save** to keep a theme in this browser
-or **Export theme** to download one ZIP with CSS, fonts, licenses,
-and installation instructions. Your current design is restored when you reload.
+or **Export theme** to copy or download one CSS file with Google-hosted fonts. Your current design is restored when you reload.
 
 ## Use your theme
 
@@ -52,6 +51,6 @@ pnpm preview
 
 ## License
 
-Lavette is [MIT licensed](LICENSE). Bundled fonts retain their SIL Open Font
-Licenses in `public/fonts/`. The bundled UI skill retains its
+Lavette is [MIT licensed](LICENSE). Fonts are served by Google Fonts under their
+respective open-source licenses. The bundled UI skill retains its
 [third-party license notices](.agents/skills/better-ui/LICENSE.txt).

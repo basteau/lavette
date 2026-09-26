@@ -98,3 +98,18 @@ stays at `100%`.
 The adjustment applies to every supplied weight and italic face, including the
 exported `@font-face` declarations. It applies at every control size.
 [`src/fonts.ts`](../src/fonts.ts) defines the pairings and adjustment values.
+
+## Google-hosted fonts
+
+`src/google-fonts.json` records Google Fonts CSS API responses as face metadata:
+versioned WOFF2 URLs, weight/style declarations, and Unicode ranges. The preview
+and CSS export share these declarations, with per-family `size-adjust` values.
+Geist Pixel Square explicitly sets the `ELSH` axis to 1. Optical-size ranges are
+retained for Fraunces, DM Sans, Newsreader, and Source Serif 4.
+
+Refresh deliberately with `python3 scripts/refresh-google-fonts.py`; review the
+manifest and recheck metrics and typography before committing. Builds and exports
+use the checked-in metadata and do not contact Google. Browsers fetch the needed
+font subsets from `fonts.gstatic.com`, with `font-display: swap` and fallbacks.
+The studio bounds preload attempts at eight seconds and keeps editing/export
+available if fonts fail. Color changes do not replace registered font faces.
