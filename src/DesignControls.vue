@@ -2,7 +2,6 @@
 import { useId } from 'vue';
 import type { PaletteValues } from './palette';
 import { FONT_PAIRINGS, fontPairing } from './fonts';
-import { UI_SIZE_OPTIONS } from './sizing';
 const values = defineModel<PaletteValues>({ required: true });
 const id = useId();
 const sliders = [
@@ -43,9 +42,6 @@ function update(key: SliderKey, next: number | number[] | undefined) {
     <details class="control-details">
       <summary>Control details</summary>
       <div class="space-y-6 pt-5">
-        <UFormField label="Default control size">
-          <USelect v-model="values.uiSize" :items="UI_SIZE_OPTIONS" class="w-full" />
-        </UFormField>
         <UFormField label="Focus offset" :description="`${values.focusOffset}px around keyboard focus outlines`">
           <USlider :model-value="values.focusOffset" @update:model-value="update('focusOffset', $event)" :max="4" :step="1" aria-label="Focus offset" />
         </UFormField>

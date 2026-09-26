@@ -1,8 +1,6 @@
 <script setup>
 import { ref, watch, onUnmounted } from 'vue';
 import { presets } from './presets';
-import { uiSizeProps } from '../../../src/sizing';
-const size = ref('md');
 import { useToast } from '@nuxt/ui/composables/useToast';
 const theme = ref('default');
 const dark = ref(false);
@@ -29,12 +27,10 @@ function submit() {
 }
 </script>
 <template>
-  <UTheme :props="uiSizeProps(size)">
   <UApp>
     <header class="sticky top-0 z-20 bg-default border-b border-muted p-4 flex flex-wrap gap-4 items-end">
       <UFormField label="Theme example"><select v-model="theme" aria-label="Theme example" class="border border-accented rounded p-2 bg-default"><option v-for="(_, name) in presets" :key="name" :value="name">{{ name }}</option></select></UFormField>
       <UFormField label="Surface"><select v-model="surface" aria-label="Surface" class="border border-accented rounded p-2 bg-default"><option v-for="value in ['bg','bg-muted','bg-elevated','bg-accented']" :key="value">{{value}}</option></select></UFormField>
-      <UFormField label="Default size"><select v-model="size" aria-label="Default size" class="border border-accented rounded p-2 bg-default"><option v-for="value in ['sm','md','lg']" :key="value">{{value}}</option></select></UFormField>
       <UButton color="neutral" variant="outline" @click="dark = !dark">{{dark ? 'Switch to light mode' : 'Switch to dark mode'}}</UButton>
       <UButton color="error" variant="outline" @click="modal = true">Open confirmation</UButton>
     </header>
@@ -69,5 +65,4 @@ function submit() {
       <template #footer><UButton color="neutral" variant="outline" @click="modal = false">Cancel</UButton><UButton color="error" @click="modal = false">Remove example</UButton></template>
     </UModal>
   </UApp>
-  </UTheme>
 </template>

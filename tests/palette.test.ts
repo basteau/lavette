@@ -24,6 +24,7 @@ describe("palette engine", () => {
         ),
       );
     }
+    assert.deepEqual(normalize({ uiSize: "lg" }), normalize({}), "legacy size settings are ignored");
     assert.deepEqual(
       normalize({
         recipe: "tonal",
@@ -41,7 +42,6 @@ describe("palette engine", () => {
         radius: 0.125,
         focusOffset: 0,
         fontPairing: "studio",
-        uiSize: "md",
       },
     );
   });

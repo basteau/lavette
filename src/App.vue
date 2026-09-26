@@ -10,7 +10,6 @@ import {
 } from "./palette";
 import { themeStyles, corePaletteColors, focusStyles } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
-import { uiSizeProps, exportSizeConfig } from "./sizing";
 import DesignControls from "./DesignControls.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 const Showcase = defineAsyncComponent(() => import("./Showcase.vue"));
@@ -29,9 +28,6 @@ const dark = ref(false);
 const settings = ref(false);
 const collection = ref(false);
 const exportOpen = ref(false);
-const exportTarget = ref<"nuxt" | "vue">("nuxt");
-const sizeDefaults = computed(() => uiSizeProps(values.value.uiSize));
-const sizeConfig = computed(() => exportSizeConfig(values.value.uiSize, exportTarget.value));
 const toast = useToast();
 function notify(title: string, duration = 5000) {
   toast.add({ id: "studio-notice", title, duration });
@@ -84,7 +80,7 @@ const isSaved = computed(() =>
   ),
 );
 function shuffle() {
-  values.value = { ...randomValues(), fontPairing: values.value.fontPairing, focusOffset: values.value.focusOffset, uiSize: values.value.uiSize };
+  values.value = { ...randomValues(), fontPairing: values.value.fontPairing, focusOffset: values.value.focusOffset };
 }
 function persist() {
   try {
@@ -150,10 +146,9 @@ async function downloadPackage() {
   exportError.value = "";
   // Snapshot the preview before asynchronous asset loading.
   const current = palette.value;
-  const target = exportTarget.value;
   try {
     const { createThemePackage } = await import("./theme-package");
-    const bytes = await createThemePackage(current, target, async path => {
+    const bytes = await createThemePackage(current, async path => {
       const response = await fetch(`${import.meta.env.BASE_URL}${path}`, { signal: AbortSignal.timeout(15000) });
       if (!response.ok || response.headers.get("content-type")?.includes("text/html")) throw new Error(`Missing asset: ${path}`);
       return new Uint8Array(await response.arrayBuffer());
@@ -168,7 +163,6 @@ async function downloadPackage() {
 }
 </script>
 <template>
-  <UTheme :props="sizeDefaults">
   <UApp>
     <a href="#main" class="skip-link">Skip to showcase</a>
     <header class="site-header">
@@ -402,25 +396,21 @@ async function downloadPackage() {
             <span v-for="c in core" :key="c.label" :style="{ background: format(c.color) }" />
           </div>
           <div>
-            <h3 class="font-medium">{{ pair.name }} · {{ values.uiSize.toUpperCase() }} controls</h3>
+            <h3 class="font-medium">{{ pair.name }}</h3>
             <p class="text-sm text-muted mt-1">Light and dark themes, fonts, licenses, and setup instructions. One download.</p>
           </div>
-          <UFormField label="Your project">
-            <USelect v-model="exportTarget" :disabled="packaging" :items="[{ label: 'Nuxt', value: 'nuxt' }, { label: 'Vue / Vite', value: 'vue' }]" class="w-full" />
-          </UFormField>
           <ol class="install-steps">
             <li><span>1</span><div>Unzip and copy the files.<small>Place the CSS beside your main stylesheet and merge public/fonts into your project.</small></div></li>
             <li><span>2</span><div>Import your theme.<small>Add this after your Tailwind CSS and Nuxt UI imports.</small></div></li>
           </ol>
           <pre class="code-block">@import "./lavette-theme.css";</pre>
-          <p class="text-sm text-muted">The included README explains where to merge the control size settings. Your existing components pick up the colors and body font automatically.</p>
+          <p class="text-sm text-muted">Your existing components pick up the colors and body font automatically. Nuxt UI’s default control sizes are preserved.</p>
           <UAlert v-if="exportError" color="error" variant="soft" :title="exportError" />
           <details class="control-details">
             <summary>Only need the code?</summary>
             <div class="flex flex-wrap gap-2 pt-4">
               <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(exportCSS(palette))">Copy CSS</UButton>
               <UButton icon="i-lucide-download" color="neutral" variant="outline" @click="download">Download CSS</UButton>
-              <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copy(sizeConfig)">Copy size config</UButton>
             </div>
             <p class="text-sm text-muted mt-3">CSS alone requires the fonts from the ZIP in public/fonts.</p>
           </details>
@@ -450,5 +440,4 @@ async function downloadPackage() {
           aria-label="Text to copy" /></template
     ></UModal>
   </UApp>
-  </UTheme>
 </template>

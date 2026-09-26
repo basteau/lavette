@@ -5,14 +5,14 @@ The export supports both Nuxt and Vue with Vite.
 
 ## Download the theme
 
-1. In the studio, select **Export theme** and choose **Nuxt** or **Vue / Vite**.
+1. In the studio, select **Export theme**.
 2. Select **Download theme ZIP** and unzip it.
 3. Copy `lavette-theme.css` beside your main stylesheet and merge the included
    `public/fonts/` folder into your project. All selected fonts and licenses are included.
-4. Follow the included `README.md` to merge `lavette-ui.config.ts` into your configuration.
+4. Import the CSS as described below or in the included `README.md`.
 
-The ZIP also includes `lavette-theme.json`, a record of the exact generator settings.
-The **Only need the code?** section offers individual CSS and configuration copy actions.
+The ZIP contains the CSS, fonts, licenses, and installation instructions.
+The **Only need the code?** section lets you copy or download the CSS separately.
 
 ## Import the CSS
 
@@ -30,7 +30,7 @@ well as color tokens. Removing those rules changes fills, labels, and hover
 states. See [status colors](theme-reference.md#status-colors) for the token details.
 
 The export supplies all seven color scales. You do not need an `app.config.ts`
-color mapping.
+color mapping. Nuxt UI’s default control sizes are preserved.
 
 ## Add the fonts
 
@@ -45,23 +45,6 @@ color mapping.
    	Your page title
    </h1>
    ```
-
-## Apply the control size
-
-Control size is Nuxt UI configuration, not a CSS token. Importing the stylesheet
-alone does not apply the selected **Small**, **Medium**, or **Large** default.
-
-- For Nuxt, merge the downloaded configuration's `ui` entries into your existing
-  `app.config.ts`.
-- For Vue with Vite, merge the downloaded `ui` option into the existing
-  `@nuxt/ui/vite` plugin call in `vite.config.ts`.
-
-Do not replace unrelated configuration or register the Vite plugin a second
-time. The downloaded `lavette-ui.config.ts` is a snippet to merge, not a file
-your app loads automatically.
-
-Explicit component `size` props override the default. See
-[control sizes](theme-reference.md#control-sizes) for what changes.
 
 ## Check the result
 

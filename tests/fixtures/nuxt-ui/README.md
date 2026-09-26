@@ -33,7 +33,6 @@ Repeat these checks in light and dark mode. Use the **Surface** selector to chec
   alerts, progress indicators, checked controls, and borders.
 - Use Tab to check keyboard focus. Use the pointer to check hover and pressed
   states.
-- Change **Default size** through `sm`, `md`, and `lg` to check control sizing.
 - Submit an invalid email to check the error message. Correct the email and
   submit again to check the success toast.
 - Open the confirmation dialog to check its solid warning alert. The dialog

@@ -82,18 +82,8 @@ check. Browser checks remain necessary.
 
 ## Control sizes
 
-Small, Medium, and Large map to Nuxt UI's `sm`, `md`, and `lg` default size
-variants for supported controls. Padding, icon size, and control text follow
-Nuxt UI's definitions.
-
-Body and display typography do not change with this setting. Components with
-explicit sizes keep those sizes. Components without a size variant, such as
-cards, retain their own layout and typography.
-
-The companion configuration applies defaults through `app.config.ts` in Nuxt or
-the `ui` option of `@nuxt/ui/vite`. The supported component list and export code
-are in [`src/sizing.ts`](../src/sizing.ts). This uses the same configuration format
-as [Nuxt UI's theme editor](https://github.com/nuxt/ui/blob/v4/docs/app/utils/theme/engine/serialize.ts).
+Lavette uses Nuxt UI's default control sizes. The theme export contains no size
+configuration; existing component size props and application defaults still apply.
 
 ## Font sizing
 
