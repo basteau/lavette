@@ -22,3 +22,6 @@ npm-shrinkwrap.json
 yarn.lock
 bun.lock
 bun.lockb
+
+# Local Claude Code preview configuration.
+.claude/launch.json
