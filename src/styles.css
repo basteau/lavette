@@ -84,7 +84,8 @@ p {
 }
 .studio-layout {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  /* The settings panel grows with the window so labels and slider ends stay on one line. */
+  grid-template-columns: clamp(264px, 21vw, 360px) minmax(0, 1fr);
   max-width: 1800px;
   margin: auto;
 }
@@ -598,6 +599,9 @@ p {
   top: 12px;
 }
 @media (min-width: 1600px) {
+  .studio-sidebar {
+    padding: 36px 32px;
+  }
   .studio-main {
     padding: 56px 64px 0;
   }
