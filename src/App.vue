@@ -8,13 +8,13 @@ import {
   format,
   type PaletteValues,
 } from "./palette";
-import { themeStyles, corePaletteColors, focusStyles } from "./theme";
+import { themeStyles, fontStyles, corePaletteColors, focusStyles } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
 import DesignControls from "./DesignControls.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 const Showcase = defineAsyncComponent(() => import("./Showcase.vue"));
 const draftKey = "lavette-draft-v1";
-const values = ref(normalize({ recipe: "tonal", hue: 185, mood: 45, depth: 45, paperWarmth: 30 }));
+const values = ref(normalize({}));
 try {
   const draft = localStorage.getItem(draftKey);
   if (draft) values.value = normalize(JSON.parse(draft));
@@ -60,7 +60,7 @@ watch(() => values.value.fontPairing, async (id, _, onCleanup) => {
   }
 }, { immediate: true });
 watchEffect(() => {
-  style.textContent = themeStyles(palette.value) + focusStyles;
+  style.textContent = themeStyles(palette.value) + fontStyles(values.value.fontPairing) + focusStyles;
 });
 onUnmounted(() => style.remove());
 watchEffect(() => {
@@ -77,7 +77,7 @@ const isSaved = computed(() =>
   ),
 );
 function shuffle() {
-  values.value = { ...randomValues(), fontPairing: values.value.fontPairing, focusOffset: values.value.focusOffset };
+  values.value = randomValues(values.value);
 }
 function persist() {
   try {
@@ -333,7 +333,7 @@ function download() {
               class="saved-dot"
               :style="{
                 background: format(
-                  generatePalette(entry.values).theme.seeds.primary,
+                  generatePalette(entry.values).theme.roles.light.primary,
                 ),
               }"
             /><UButton
@@ -345,7 +345,7 @@ function download() {
                 collection = false;
               "
               >{{ fontPairing(entry.values.fontPairing).name }} ·
-              {{ entry.values.recipe }} · {{ entry.values.hue }}°</UButton
+              {{ entry.values.harmony }} · {{ entry.values.hue }}°</UButton
             ><UButton
               icon="i-lucide-trash-2"
               color="neutral"

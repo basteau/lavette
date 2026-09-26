@@ -1,257 +1,278 @@
 import { fontFaces, fontTokens, fontPairing, typographyTokens } from "./fonts";
-import { converter, wcagContrast, type Oklch } from "culori";
-import type { Palette, PaletteCheck, PaletteValues } from "./palette";
+import { converter, wcagContrast, type Color, type Oklch } from "culori";
+import type { Palette, PaletteValues } from "./palette";
 
 export const THEME_ROLES = ["primary", "secondary", "success", "info", "warning", "error", "neutral"] as const;
 export const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
-export type ThemeRole = typeof THEME_ROLES[number];
-export type StatusRole = keyof typeof STATUS_HUES;
-export type SemanticRole = Exclude<ThemeRole, "neutral">;
-export type Shade = typeof SHADES[number];
-export type ColorMode = "light" | "dark";
-export type Tokens = Record<`--${string}`, string>;
+type ThemeRole = typeof THEME_ROLES[number];
+type AccentRole = Exclude<ThemeRole, "neutral">;
+export type StatusRole = keyof typeof STATUS;
+type Shade = typeof SHADES[number];
+type ColorMode = "light" | "dark";
+type Tokens = Record<`--${string}`, string>;
+interface ContrastCheck {
+  label: string;
+  ratio: number;
+  target: number;
+}
 export interface Theme {
-  seeds: Record<ThemeRole, Oklch>;
+  hues: Record<ThemeRole, number>;
   scales: Record<ThemeRole, Record<Shade, Oklch>>;
+  surfaces: Record<ColorMode, Oklch[]>;
+  /** The single --ui-<role> color per mode, as Nuxt UI uses it for text, fills, and tints. */
+  roles: Record<ColorMode, Record<AccentRole, Oklch>>;
   tokens: Tokens;
   modes: Record<ColorMode, Tokens>;
-  checks: Record<ColorMode, PaletteCheck[]>;
-  semantic: Record<ColorMode, Record<SemanticRole, SemanticColors>>;
+  checks: Record<ColorMode, ContrastCheck[]>;
 }
-export interface SemanticColors {
-  text: Oklch;
-  fill: Oklch;
-  hover: Oklch;
-  onFill: Oklch;
-  indicator: Oklch;
-  tint: Oklch;
-}
-const linear = converter("lrgb");
-const rgb = converter("rgb");
-const oklch = converter("oklch");
-const fmt = (c: Oklch) => `oklch(${c.l} ${c.c} ${c.h})`;
-const round = (v: number) => Math.round(v * 1e6) / 1e6;
-const wrap = (h: number) => (h % 360 + 360) % 360;
-const weights = [6, 12, 24, 42, 65, 100, 85, 70, 55, 40, 25];
 
-// Status identity is fixed; mood/depth provide restrained tonal integration.
-export const STATUS_HUES = { success: 150, info: 250, warning: 85, error: 25 } as const;
-export function mixShade(seed: Oklch, shade: Shade): Oklch {
-  const i = SHADES.indexOf(shade);
-  const t = weights[i] / 100;
-  return { mode: "oklch", l: seed.l * t + (shade < 500 ? 1 - t : 0), c: seed.c * t, h: seed.h };
+export const ACCENT_ROLES = THEME_ROLES.filter((role): role is AccentRole => role !== "neutral");
+/** Status meaning stays recognizable: each hue may move within its range to clear brand hues. */
+export const STATUS = {
+  success: { hue: 150, range: [130, 165] },
+  info: { hue: 250, range: [225, 270] },
+  warning: { hue: 75, range: [60, 88] },
+  error: { hue: 25, range: [12, 38] },
+} as const;
+
+const TEXT = 4.5;
+const GRAPHIC = 3;
+// Nuxt UI renders a role color at these opacities: tints behind text, 75% for hover,
+// and alert descriptions at 90%.
+const TINTS = [0, 0.1, 0.15];
+const HOVER = 0.75;
+const DESCRIPTION = 0.9;
+const PAPER_HUE = 80;
+const CANVAS_L = 0.975;
+// Full vividness from 300 to 700, falling off toward both ends.
+const CHROMA = { 50: 0.12, 100: 0.25, 200: 0.5, 300: 1, 400: 1, 500: 1, 600: 1, 700: 1, 800: 0.8, 900: 0.62, 950: 0.48 } as const;
+
+const lrgb = converter("lrgb");
+const rgb = converter("rgb");
+const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+const round = (n: number) => Math.round(n * 1e6) / 1e6;
+const wrap = (h: number) => ((h % 360) + 360) % 360;
+export const hueDistance = (a: number, b: number) => {
+  const d = wrap(a - b);
+  return Math.min(d, 360 - d);
+};
+export const format = (c: Oklch) => `oklch(${c.l} ${c.c} ${c.h ?? 0})`;
+
+export function inGamut(color: Oklch): boolean {
+  const v = lrgb(color);
+  return [v.r, v.g, v.b].every(n => Number.isFinite(n) && n >= -1e-7 && n <= 1 + 1e-7);
 }
-function displayable(c: Oklch): boolean {
-  const v = linear(c);
-  return [v.r, v.g, v.b].every(n => n >= -1e-7 && n <= 1 + 1e-7);
-}
-function seed(l: number, requestedC: number, h: number): Oklch {
-  let lo = 0, hi = requestedC;
-  // Fit the entire emitted mix path, not just its 500 seed.
-  for (let i = 0; i < 22; i++) {
+function maxChroma(l: number, h: number): number {
+  let lo = 0, hi = 0.4;
+  for (let i = 0; i < 24; i++) {
     const c = (lo + hi) / 2;
-    const candidate: Oklch = { mode: "oklch", l, c, h };
-    if (SHADES.every(shade => displayable(mixShade(candidate, shade)))) lo = c;
+    if (inGamut({ mode: "oklch", l, c, h })) lo = c;
     else hi = c;
   }
-  return { mode: "oklch", l: round(l), c: Math.floor(lo * 0.998 * 1e6) / 1e6, h: round(wrap(h)) };
+  return lo;
 }
-// Fit an individual color by reducing chroma while preserving lightness and hue.
-function fitColor(l: number, c: number, h: number): Oklch {
-  let lo = 0, hi = c;
-  for (let i = 0; i < 22; i++) {
-    const mid = (lo + hi) / 2;
-    if (displayable({ mode: "oklch", l, c: mid, h })) lo = mid;
-    else hi = mid;
+/** The requested color, with chroma reduced only as far as sRGB requires. */
+function fit(l: number, c: number, h: number): Oklch {
+  l = round(clamp(l, 0, 1));
+  h = round(wrap(h));
+  return { mode: "oklch", l, c: Math.floor(Math.min(c, maxChroma(l, h) * 0.998) * 1e6) / 1e6, h };
+}
+/** Yellows turn olive as they darken; drift them toward amber instead. */
+function hueAt(h: number, l: number): number {
+  const weight = Math.max(0, 1 - hueDistance(h, 90) / 40);
+  return wrap(h + weight * 40 * (l - 0.64));
+}
+const tone = (h: number, c: number) => (l: number) => fit(l, c, hueAt(h, l));
+
+/** The color closest to `start` that passes, moving toward `end`. Every check here only gains
+ * contrast in that direction, so bisection finds the boundary. Returns `end` if nothing passes. */
+function search(make: (l: number) => Oklch, start: number, end: number, passes: (c: Oklch) => boolean): Oklch {
+  if (passes(make(start))) return make(start);
+  let fail = start, pass = end;
+  for (let i = 0; i < 16; i++) {
+    const mid = (fail + pass) / 2;
+    if (passes(make(mid))) pass = mid;
+    else fail = mid;
   }
-  return { mode: "oklch", l: round(l), c: Math.floor(lo * 0.998 * 1e6) / 1e6, h };
+  return make(pass);
 }
-const PAPER_SURFACE_OFFSETS: Partial<Record<Shade, number>> = { 50: 0.012, 100: 0.035, 200: 0.065 };
-function neutralShade(base: Oklch, paper: Oklch, shade: Shade): Oklch {
-  if (shade === 500) return base;
-  // Light surfaces retain paper's undertone instead of bleaching it with white.
-  // Dark shades taper chroma with lightness to stay restrained.
-  const offset = PAPER_SURFACE_OFFSETS[shade];
-  const l = offset === undefined ? mixShade(base, shade).l : paper.l - offset;
-  return fitColor(l, paper.c * Math.min(1, l / base.l), paper.h!);
-}
-function lightestPassing(make: (l: number) => Oklch, maxL: number, passes: (c: Oklch) => boolean): Oklch {
-  let lo = 0.15, hi = maxL;
-  if (passes(make(hi))) return make(hi);
-  for (let i = 0; i < 22; i++) {
-    const mid = (lo + hi) / 2;
-    if (passes(make(mid))) lo = mid;
-    else hi = mid;
-  }
-  return make(lo - 0.00001);
-}
-const isStatus = (role: ThemeRole): role is StatusRole => role in STATUS_HUES;
 
 // CSS source-over alpha compositing occurs in sRGB, not OKLCH.
-export function composite(fg: Oklch, bg: Oklch, opacity: number) {
+export function composite(fg: Color, bg: Color, opacity: number) {
   const f = rgb(fg), b = rgb(bg);
   return { mode: "rgb" as const, r: f.r * opacity + b.r * (1 - opacity), g: f.g * opacity + b.g * (1 - opacity), b: f.b * opacity + b.b * (1 - opacity) };
 }
+const minContrast = (color: Oklch, surfaces: Oklch[]) => Math.min(...surfaces.map(s => wcagContrast(color, s)));
+/** Role color as text: on each surface and on its own tints, including faded descriptions. */
+const textContrast = (color: Oklch, surfaces: Oklch[]) => Math.min(...surfaces.flatMap(s => TINTS.map(alpha => {
+  const bg = composite(color, s, alpha);
+  return wcagContrast(composite(color, bg, DESCRIPTION), bg);
+})));
+/** Role color as a fill: its label, a faded label, and the label on the 75% hover over each surface. */
+const fillContrast = (color: Oklch, label: Oklch, surfaces: Oklch[]) => Math.min(
+  wcagContrast(composite(label, color, DESCRIPTION), color),
+  ...surfaces.map(s => wcagContrast(label, composite(color, s, HOVER))),
+);
+/** Role color as a link on hover: 75% over each surface. */
+const hoverContrast = (color: Oklch, surfaces: Oklch[]) => Math.min(...surfaces.map(s => wcagContrast(composite(color, s, HOVER), s)));
 
-export function generateTheme(values: PaletteValues, colors: Palette["colors"]): Theme {
-  const { mood, depth } = values;
-  const l = 0.66 - depth * 0.0006;
-  const c = 0.075 + mood * 0.0011;
-  const primaryHue = colors.accent.h!;
-  const primary = seed(l, c, primaryHue);
-  // Derive tonal secondary from the fitted primary, so gamut clipping cannot
-  // collapse both roles to the same chroma at saturated hues.
-  const secondaryChroma = values.recipe === "tonal" ? primary.c * 0.45 : c * 0.8;
-  const statusDepth = depth * 0.0002;
-  const seeds = {
-    primary,
-    secondary: seed(l, secondaryChroma, colors.support.h!),
-    success: seed(0.68 - statusDepth, 0.17 + mood * 0.0002, STATUS_HUES.success),
-    info: seed(0.66 - statusDepth, 0.18 + mood * 0.0002, STATUS_HUES.info),
-    warning: seed(0.76 - statusDepth, 0.15 + mood * 0.0001, STATUS_HUES.warning),
-    error: seed(0.64 - statusDepth, 0.21 + mood * 0.0002, STATUS_HUES.error),
-    neutral: fitColor(0.58, colors.canvas.c, colors.canvas.h!),
+/** Keep the preferred hue unless a brand hue is within 30°; then move only as far as the range allows. */
+function clearHue(preferred: number, [lo, hi]: readonly [number, number], avoid: number[]): number {
+  let best = preferred, bestScore = -Infinity;
+  for (let h = lo; h <= hi; h++) {
+    const clearance = Math.min(...avoid.map(a => hueDistance(h, a)));
+    const score = Math.min(clearance, 30) * 10 - Math.abs(h - preferred);
+    if (score > bestScore) [best, bestScore] = [h, score];
+  }
+  return wrap(best);
+}
+
+/** Ramp lightness for every accent role: 700 is the light-mode role color and 300 the
+ * dark-mode one; the other shades space out around them. */
+function rampLightness(l300: number, l700: number): Record<Shade, number> {
+  const l500 = (l300 + l700) / 2;
+  const toDark = (f: number) => l700 - (l700 - 0.2) * f;
+  return {
+    50: 0.97, 100: 0.94, 200: (0.94 + l300) / 2, 300: l300, 400: (l300 + l500) / 2, 500: l500,
+    600: (l500 + l700) / 2, 700: l700, 800: toDark(0.3), 900: toDark(0.6), 950: toDark(0.85),
+  };
+}
+
+export function generateTheme(values: PaletteValues): Theme {
+  const character = values.character / 100;
+  const warmth = values.paperWarmth / 100;
+
+  // Hues: primary is exactly the chosen hue. Secondary takes the harmony offset that
+  // stays clearest of status hues; status hues then step aside from both brand hues.
+  const primaryHue = values.hue;
+  const statusClearance = (h: number) => Math.min(25, ...Object.values(STATUS).map(s => hueDistance(h, s.hue)));
+  const offsets = values.harmony === "complementary" ? [180, 160, 200] : [40, -40];
+  const secondaryHue = offsets
+    .map(offset => wrap(primaryHue + offset))
+    .reduce((best, h) => statusClearance(h) > statusClearance(best) ? h : best);
+  const hues = { primary: primaryHue, secondary: secondaryHue } as Record<ThemeRole, number>;
+  for (const [role, { hue, range }] of Object.entries(STATUS)) hues[role as StatusRole] = clearHue(hue, range, [primaryHue, secondaryHue]);
+
+  // Surfaces: a faint brand tint fades out by warmth 50, then warm paper fades in, so no
+  // setting mixes the two into a third hue. Dark mode keeps the same undertone.
+  const brandTint = Math.max(0, 1 - 2 * warmth) * (0.005 + 0.006 * character);
+  const paperTint = Math.max(0, 2 * warmth - 1) * 0.02;
+  const neutralChroma = brandTint || paperTint;
+  hues.neutral = brandTint ? primaryHue : PAPER_HUE;
+  const surface = (l: number) => fit(l, neutralChroma, hues.neutral);
+  const darkL = 0.215 - 0.035 * character;
+  const canvas = surface(CANVAS_L);
+  const night = surface(darkL);
+  const surfaces: Theme["surfaces"] = {
+    light: [canvas, surface(CANVAS_L - 0.015), surface(CANVAS_L - 0.04), surface(CANVAS_L - 0.075)],
+    dark: [night, surface(darkL + 0.025), surface(darkL + 0.05), surface(darkL + 0.09)],
+  };
+  const neutralL: Record<Shade, number> = {
+    50: CANVAS_L - 0.015, 100: CANVAS_L - 0.04, 200: CANVAS_L - 0.075, 300: 0.83, 400: 0.71,
+    500: 0.57, 600: 0.47, 700: 0.39, 800: darkL + 0.12, 900: darkL + 0.05, 950: darkL,
+  };
+
+  // Accent roles. Nuxt UI uses one color per role for text, fills, tints, and hover,
+  // so each mode gets the lightness nearest the middle that keeps all of those readable.
+  const brandChroma = 0.07 + 0.13 * character;
+  const chroma: Record<AccentRole, number> = {
+    primary: brandChroma,
+    secondary: brandChroma * (values.harmony === "complementary" ? 0.6 : 0.7),
+    success: 0.14 + 0.06 * character,
+    info: 0.14 + 0.06 * character,
+    warning: 0.14 + 0.06 * character,
+    error: 0.16 + 0.06 * character,
   };
   const scales = {} as Theme["scales"];
+  const roles: Theme["roles"] = { light: {} as Record<AccentRole, Oklch>, dark: {} as Record<AccentRole, Oklch> };
+  for (const role of ACCENT_ROLES) {
+    const make = tone(hues[role], chroma[role]);
+    for (const mode of ["light", "dark"] as const) {
+      const label = mode === "light" ? canvas : night;
+      const passes = (c: Oklch) => textContrast(c, surfaces[mode]) >= TEXT
+        && fillContrast(c, label, surfaces[mode]) >= TEXT && hoverContrast(c, surfaces[mode]) >= TEXT;
+      roles[mode][role] = mode === "light" ? search(make, 0.62, 0.15, passes) : search(make, 0.55, 0.9, passes);
+    }
+    const l = rampLightness(roles.dark[role].l, roles.light[role].l);
+    scales[role] = Object.fromEntries(SHADES.map(shade => [shade,
+      shade === 300 ? roles.dark[role] : shade === 700 ? roles.light[role]
+        : fit(l[shade], chroma[role] * CHROMA[shade], hueAt(hues[role], l[shade]))])) as Record<Shade, Oklch>;
+  }
+  scales.neutral = Object.fromEntries(SHADES.map(shade => [shade, surface(neutralL[shade])])) as Record<Shade, Oklch>;
+
   const tokens: Tokens = {
     "--ui-focus-offset": `${values.focusOffset}px`,
     "--ui-radius": `${values.radius}rem`,
-    "--ui-container": "80rem",
-    "--ui-header-height": "4rem",
-    ...fontTokens(values.fontPairing),
-    ...typographyTokens(values.fontPairing),
   };
-  for (const role of THEME_ROLES) {
-    scales[role] = {} as Record<Shade, Oklch>;
-    for (const [i, shade] of SHADES.entries()) {
-      const base = seeds[role];
-      const independent = isStatus(role) && shade > 500;
-      scales[role][shade] = role === "neutral"
-        ? neutralShade(base, colors.canvas, shade)
-        : independent
-        ? fitColor(base.l * weights[i] / 100, base.c * [1, 0.92, 0.8, 0.65, 0.5][i - 6], base.h!)
-        : mixShade(base, shade);
-      tokens[`--ui-color-${role}-${shade}`] = role === "neutral" || independent ? fmt(scales[role][shade]) : shade === 500 ? fmt(seeds[role])
-        : `color-mix(in oklab, var(--ui-color-${role}-500) ${weights[i]}%, ${shade < 500 ? "white" : "black"})`;
-    }
-  }
-  const modes = {} as Theme["modes"];
-  const checks = {} as Theme["checks"];
-  const semantic = {} as Theme["semantic"];
+  for (const role of THEME_ROLES) for (const shade of SHADES) tokens[`--ui-color-${role}-${shade}`] = format(scales[role][shade]);
+
   const n = scales.neutral;
   const alias = (shade: Shade) => `var(--ui-color-neutral-${shade})`;
+  const modes = {} as Theme["modes"];
+  const checks = {} as Theme["checks"];
   for (const mode of ["light", "dark"] as const) {
     const dark = mode === "dark";
-    const bg = dark ? n[950] : colors.canvas;
-    const inverted = dark ? n[950] : colors.canvas;
-    // Accented is deliberately usable behind ordinary text, including dark mode.
-    const surfaces = [bg, n[dark ? 900 : 50], n[dark ? 800 : 100], n[dark ? 800 : 200]];
+    const [bg, muted, elevated, accented] = surfaces[mode];
+    const inverted = dark ? canvas : night;
+    // Borders are the faintest color meeting each target on every surface.
+    const border = (target: number) => search(surface, dark ? darkL + 0.09 : CANVAS_L - 0.075, dark ? 0.9 : 0.1,
+      color => minContrast(color, surfaces[mode]) >= target);
+    const borders = { muted: border(1.25), standard: border(1.5), accented: border(GRAPHIC) };
+    const text = dark
+      ? { dimmed: 400, muted: 300, toned: 200, text: 100 } as const
+      : { dimmed: 600, muted: 700, toned: 800, text: 900 } as const;
     const m: Tokens = {
-      "--ui-bg": dark ? alias(950) : fmt(colors.canvas),
-      "--ui-bg-muted": alias(dark ? 900 : 50),
-      "--ui-bg-elevated": alias(dark ? 800 : 100),
-      "--ui-bg-accented": alias(dark ? 800 : 200),
-      "--ui-bg-inverted": dark ? fmt(colors.canvas) : alias(950),
-      "--ui-text-dimmed": alias(dark ? 300 : 600),
-      "--ui-text-muted": alias(dark ? 200 : 700),
-      "--ui-text-toned": alias(dark ? 100 : 800),
-      "--ui-text": alias(dark ? 100 : 900),
-      "--ui-text-highlighted": dark ? fmt(colors.canvas) : alias(950),
-      "--ui-text-inverted": dark ? alias(950) : fmt(colors.canvas),
-      "--ui-border": alias(dark ? 700 : 200),
-      "--ui-border-muted": alias(dark ? 800 : 100),
-      "--ui-border-accented": alias(dark ? 400 : 500),
-      "--ui-border-inverted": dark ? fmt(colors.canvas) : alias(950),
+      "--ui-bg": format(bg),
+      "--ui-bg-muted": format(muted),
+      "--ui-bg-elevated": format(elevated),
+      "--ui-bg-accented": format(accented),
+      "--ui-bg-inverted": format(inverted),
+      "--ui-text-dimmed": alias(text.dimmed),
+      "--ui-text-muted": alias(text.muted),
+      "--ui-text-toned": alias(text.toned),
+      "--ui-text": alias(text.text),
+      "--ui-text-highlighted": dark ? format(canvas) : alias(950),
+      "--ui-text-inverted": format(dark ? night : canvas),
+      "--ui-border": format(borders.standard),
+      "--ui-border-muted": format(borders.muted),
+      "--ui-border-accented": format(borders.accented),
+      "--ui-border-inverted": format(inverted),
     };
-    // Decorative separators get a modest visibility floor on every ordinary surface.
-    // Control-identifying boundaries retain the separately checked 3:1 token.
-    const borderColor = (target: number) => lightestPassing(
-      lightness => fitColor(lightness, seeds.neutral.c, seeds.neutral.h!), 0.88,
-      color => surfaces.every(surface => wcagContrast(color, surface) >= target),
-    );
-    const lightBorders = dark ? undefined : { muted: borderColor(1.5), standard: borderColor(1.9) };
-    if (lightBorders) {
-      m["--ui-border-muted"] = fmt(lightBorders.muted);
-      m["--ui-border"] = fmt(lightBorders.standard);
-    }
-    semantic[mode] = {} as Record<SemanticRole, SemanticColors>;
-    checks[mode] = [];
-    const add = (label: string, ratio: number, target = 4.5) => checks[mode].push({ label, ratio, target });
-    for (const role of THEME_ROLES.filter(r => r !== "neutral")) {
-      const candidates: Shade[] = dark ? [400, 300, 200, 100, 50] : [600, 700, 800, 900, 950];
-      const passes = (shade: Shade) => surfaces.every(surface => {
-        const value = scales[role][shade];
-        return wcagContrast(value, composite(value, surface, 0.15)) >= 4.6
-          && wcagContrast(inverted, composite(value, surface, 0.75)) >= 4.6
-          && wcagContrast(composite(value, surface, 0.75), surface) >= 4.6;
-      });
-      const shade = candidates.find(passes) ?? candidates[candidates.length - 1];
-      const value = scales[role][shade];
-      const base = seeds[role];
-      const tint = dark ? value : base;
-      const text = dark ? value : lightestPassing(
-        lightness => fitColor(lightness, base.c, base.h!), 0.58,
-        color => surfaces.every(surface => wcagContrast(color, composite(tint, surface, 0.15)) >= 4.6),
-      );
-      const onFill = dark || role === "warning" ? n[950] : colors.canvas;
-      const indicator = dark ? value : role === "warning" ? text : lightestPassing(
-        lightness => fitColor(lightness, base.c, base.h!), 0.62,
-        color => wcagContrast(onFill, color) >= 4.6
-          && surfaces.every(surface => wcagContrast(color, surface) >= 3.1),
-      );
-      // Amber needs a genuinely light fill for a dark label. Do not make
-      // labelled buttons as dark as the small progress/presence indicators.
-      const fill = !dark && role === "warning" ? fitColor(0.79 - statusDepth, base.c, base.h!) : indicator;
-      const hover = fitColor(fill.l + (dark ? 0.035 : -0.025), fill.c, fill.h!);
-      semantic[mode][role] = { text, fill, hover, onFill, indicator, tint };
-      m[`--ui-${role}`] = fmt(text);
-      for (const [name, color] of Object.entries({ fill, hover, "on-fill": onFill, indicator, tint })) {
-        m[`--ui-${role}-${name}`] = fmt(color);
-      }
-      add(`${role} text / surfaces`, Math.min(...surfaces.map(surface => wcagContrast(text, surface))));
-      add(`${role} soft + hover`, Math.min(...surfaces.flatMap(surface => [0.1, 0.15].map(alpha => wcagContrast(text, composite(tint, surface, alpha))))));
-      add(`${role} solid label + hover`, Math.min(wcagContrast(onFill, fill), wcagContrast(onFill, hover)), !dark && role === "warning" ? 7 : 4.5);
-      add(`${role} link hover`, Math.min(...surfaces.map(surface => wcagContrast(text, surface))));
-      add(`${role} indicator / surfaces`, Math.min(...surfaces.map(surface => wcagContrast(indicator, surface))), 3);
-    }
-    for (const [label, shade] of [["Dimmed", dark ? 300 : 600], ["Muted", dark ? 200 : 700], ["Body", dark ? 100 : 900]] as const) {
-      add(`${label} text / surfaces`, Math.min(...surfaces.map(s => wcagContrast(n[shade], s))));
-    }
-    add("Accented control border / surfaces", Math.min(...surfaces.map(surface => wcagContrast(n[dark ? 400 : 500], surface))), 3);
-    if (lightBorders) {
-      add("Muted border / surfaces", Math.min(...surfaces.map(surface => wcagContrast(lightBorders.muted, surface))), 1.5);
-      add("Standard border / surfaces", Math.min(...surfaces.map(surface => wcagContrast(lightBorders.standard, surface))), 1.9);
+    const list: ContrastCheck[] = [];
+    const add = (label: string, ratio: number, target = TEXT) => list.push({ label, ratio, target });
+    add("Body text", minContrast(n[text.text], surfaces[mode]));
+    add("Muted text", minContrast(n[text.muted], surfaces[mode]));
+    add("Dimmed text", minContrast(n[text.dimmed], surfaces[mode]));
+    add("Inverted label", wcagContrast(dark ? night : canvas, inverted));
+    add("Control border", minContrast(borders.accented, surfaces[mode]), GRAPHIC);
+    add("Border", minContrast(borders.standard, surfaces[mode]), 1.5);
+    add("Muted border", minContrast(borders.muted, surfaces[mode]), 1.25);
+    for (const role of ACCENT_ROLES) {
+      const color = roles[mode][role];
+      const name = role[0].toUpperCase() + role.slice(1);
+      m[`--ui-${role}`] = `var(--ui-color-${role}-${dark ? 300 : 700})`;
+      add(`${name} text`, textContrast(color, surfaces[mode]));
+      add(`${name} button label`, fillContrast(color, dark ? night : canvas, surfaces[mode]));
+      add(`${name} link hover`, hoverContrast(color, surfaces[mode]));
     }
     modes[mode] = m;
+    checks[mode] = list;
   }
-  return { seeds, scales, tokens, modes, checks, semantic };
+  return { hues, scales, surfaces, roles, tokens, modes, checks };
 }
 
-/** Show brand base colors; background/text follow the active mode.
- * Component aliases remain independently selected for text and state contrast. */
+/** Swatches of the colors the preview is using in the given mode. */
 export function corePaletteColors(palette: Palette, mode: ColorMode) {
-  const tokens = { ...palette.theme.tokens, ...palette.theme.modes[mode] };
-  // Culori does not parse color-mix(); use the exactly equivalent generated ramps.
-  for (const role of THEME_ROLES) for (const shade of SHADES) {
-    tokens[`--ui-color-${role}-${shade}`] = fmt(palette.theme.scales[role][shade]);
-  }
-  const resolve = (token: string): Oklch => {
-    const value = tokens[token as keyof typeof tokens];
-    const reference = /^var\((--[\w-]+)\)$/.exec(value);
-    if (reference) return resolve(reference[1]);
-    const color = oklch(value);
-    if (!color) throw new Error(`Unresolved theme color: ${token}`);
-    return color;
-  };
+  const { surfaces, scales, roles } = palette.theme;
   return [
-    { label: "Background", token: "--ui-bg" },
-    { label: "Text", token: "--ui-text" },
-    { label: "Primary", token: "--ui-color-primary-500" },
-    { label: "Secondary", token: "--ui-color-secondary-500" },
-  ].map(swatch => ({ ...swatch, color: resolve(swatch.token) }));
+    { label: "Background", token: "--ui-bg", color: surfaces[mode][0] },
+    { label: "Text", token: "--ui-text", color: scales.neutral[mode === "dark" ? 100 : 900] },
+    { label: "Primary", token: "--ui-primary", color: roles[mode].primary },
+    { label: "Secondary", token: "--ui-secondary", color: roles[mode].secondary },
+  ];
 }
 
-export function declarations(tokens: Tokens): string {
+function declarations(tokens: Tokens): string {
   return Object.entries(tokens).map(([key, value]) => `  ${key}: ${value};`).join("\n");
 }
 export const focusStyles = `/* Native controls get a clear fallback; Nuxt UI keeps its variant-specific halos. */
@@ -260,32 +281,28 @@ export const focusStyles = `/* Native controls get a clear fallback; Nuxt UI kee
 }
 :focus-visible { outline-offset: var(--ui-focus-offset, 0px); }
 `;
-/** Portable Nuxt UI 4 utility treatments, shared by preview and exported CSS.
- * Keep this outside a layer so it overrides Tailwind's generated utilities.
- * The existing --ui-role alias remains the safe text/fallback color.
- */
-export function semanticStyles(): string {
-  return THEME_ROLES.filter(role => role !== "neutral").map(role => {
-    const bg = `.bg-${role}`;
-    const enabled = ":not(:disabled):not([aria-disabled=true])";
-    const escape = (value: string) => value.replace(/[:/]/g, "\\$&");
-    const state = (prefix: string, utility: string) => `.${escape(`${prefix}:${utility}`)}:${prefix}${enabled}`;
-    // Nuxt UI alert descriptions fade otherwise passing semantic text below 4.5:1.
-    return `.text-${role} [data-slot=description].opacity-90, ${bg}.text-inverted [data-slot=description].opacity-90 { opacity: 1; }
-.${escape(`outline-${role}/25`)} { outline-color: var(--ui-${role}); }
-${bg} { background-color: var(--ui-${role}-indicator); }
-${bg}.text-inverted { background-color: var(--ui-${role}-fill); --ui-text-inverted: var(--ui-${role}-on-fill); }
-${["hover", "active"].map(prefix => `${state(prefix, `bg-${role}/75`)} { background-color: var(--ui-${role}-hover); }
-${state(prefix, `text-${role}/75`)} { color: var(--ui-${role}); }`).join("\n")}
-${[10, 15].map(alpha => {
-  const utility = `bg-${role}/${alpha}`;
-  return `.${escape(utility)}, ${["hover", "active"].map(prefix => state(prefix, utility)).join(", ")} { background-color: color-mix(in srgb, var(--ui-${role}-tint) ${alpha}%, transparent); }`;
-}).join("\n")}`;
-  }).join("\n\n");
-}
+/** Theme tokens for both modes. Fonts are declared separately: `@theme` in the export, `:root` in the studio. */
 export function themeStyles(palette: Palette): string {
-  return `:root {\n${declarations({ ...palette.theme.tokens })}\n}\n\n:root, .light {\n  color-scheme: light;\n${declarations(palette.theme.modes.light)}\n}\n\n.dark {\n  color-scheme: dark;\n${declarations(palette.theme.modes.dark)}\n}\n\n${semanticStyles()}\n`;
+  const { tokens, modes } = palette.theme;
+  return `:root {\n${declarations(tokens)}\n}\n\n:root, .light {\n  color-scheme: light;\n${declarations(modes.light)}\n}\n\n.dark {\n  color-scheme: dark;\n${declarations(modes.dark)}\n}\n`;
 }
-export function exportThemeCSS(palette: Palette): string {
-  return `/* lavette · Nuxt UI 4 / Tailwind CSS 4\n   Import this file AFTER tailwindcss and @nuxt/ui in your main CSS.\n   No app.config.ts color mapping needed: all seven --ui-color-* scales are supplied.\n   Pairing: ${fontPairing(palette.values.fontPairing).name}. Title classes: font-display font-normal leading-display tracking-normal.\n   Fonts load from Google; allow https://fonts.gstatic.com in font-src if using CSP.\n   Toggle the .dark class for dark mode; .light provides explicit light scopes.\n   Recipe ${palette.values.recipe} · Hue ${palette.values.hue} · Mood ${palette.values.mood}\n   Depth ${palette.values.depth} · Warmth ${palette.values.paperWarmth}\n   Seven OKLCH ramps; deep status shades are individually gamut-fitted.\n   Status hues are fixed; all six accent roles have separate text, fill, hover, and tint tokens.\n   Includes Nuxt UI semantic utility treatments; keep these rules with the tokens. */\n\n${fontFaces(palette.values.fontPairing)}\n\n@theme {\n${declarations({ ...fontTokens(palette.values.fontPairing), ...typographyTokens(palette.values.fontPairing) })}\n}\n\n${themeStyles(palette)}\n${focusStyles}`;
+export function fontStyles(id: string): string {
+  return `:root {\n${declarations({ ...fontTokens(id), ...typographyTokens(id) })}\n}\n`;
+}
+export function exportCSS(palette: Palette): string {
+  const v = palette.values;
+  return `/* lavette · Nuxt UI 4 / Tailwind CSS 4
+   Import after tailwindcss and @nuxt/ui. Toggle .dark for dark mode.
+   Fonts load from Google; allow https://fonts.gstatic.com in font-src if you use a CSP.
+   Display headings: font-display font-normal leading-display tracking-normal.
+   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · warmth ${v.paperWarmth} */
+
+${fontFaces(v.fontPairing)}
+
+@theme {
+${declarations({ ...fontTokens(v.fontPairing), ...typographyTokens(v.fontPairing) })}
+}
+
+${themeStyles(palette)}
+${focusStyles}`;
 }

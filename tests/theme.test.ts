@@ -1,229 +1,182 @@
 import assert from "node:assert/strict";
-import { converter, interpolate, wcagContrast } from "culori";
+import { converter, differenceCiede2000, wcagContrast, type Oklch } from "culori";
 import { describe, it } from "node:test";
-import { generatePalette, normalize, inGamut, exportCSS } from "../src/palette";
-import { THEME_ROLES, SHADES, STATUS_HUES, corePaletteColors, composite } from "../src/theme";
+import { generatePalette, exportCSS, inGamut, type Harmony } from "../src/palette";
+import { ACCENT_ROLES, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
 
-describe("Nuxt UI theme", () => {
-  it("preserves paper warmth through neutral surfaces and translucent hover states", () => {
-    const parse = converter("oklch");
-    for (const paperWarmth of [0, 50, 100]) for (const depth of [0, 100]) {
-      const baseline = generatePalette({ paperWarmth, depth });
-      for (const recipe of ["tonal", "soft"]) for (const hue of [0, 85, 185, 270]) {
-        const p = generatePalette({ recipe, hue, paperWarmth, depth });
-        assert.deepEqual(p.theme.scales.neutral, baseline.theme.scales.neutral, "brand hue must not tint paper surfaces");
-        let previous = p.colors.canvas;
-        for (const shade of [50, 100, 200] as const) {
-          const surface = p.theme.scales.neutral[shade];
-          assert.ok(surface.l < previous.l, "light surfaces must step down from the canvas");
-          assert.equal(surface.h, p.colors.canvas.h);
-          assert.ok(surface.c >= p.colors.canvas.c * 0.98, "surface must retain paper undertone");
-          for (const alpha of [0.5, 0.75, 1]) {
-            const hover = parse(composite(surface, previous, alpha))!;
-            assert.ok(Math.abs(hover.h! - p.colors.canvas.h!) < 2, "hover must not shift toward a cool hue");
-            assert.ok(hover.c >= p.colors.canvas.c * 0.95, "hover must not bleach paper warmth");
-          }
-          previous = surface;
-        }
-        const n = p.theme.scales.neutral;
-        assert.ok(n[950].l < n[900].l && n[900].l < n[800].l);
-        assert.ok(n[950].c < n[800].c && n[800].c < p.colors.canvas.c);
-        assert.equal(n[950].h, p.colors.canvas.h);
-      }
-    }
-  });
+const parse = converter("oklch");
+const deltaE = differenceCiede2000();
+const HARMONIES: Harmony[] = ["analogous", "complementary"];
 
-  it("migrates old saved settings and bounds new controls", () => {
-    assert.equal(normalize({}).radius, 0.125);
-    assert.equal(normalize({}).focusOffset, 0);
-    assert.equal(normalize({ focusOffset: -5 }).focusOffset, 0);
-    assert.equal(normalize({ focusOffset: 99 }).focusOffset, 4);
-    const css = exportCSS(generatePalette({ focusOffset: 3 }));
-    assert.match(css, /--ui-focus-offset: 3px/);
-    assert.match(css, /outline-offset: var\(--ui-focus-offset, 0px\)/);
-    assert.ok(!("semanticHarmony" in normalize({ semanticHarmony: 100 })));
-    assert.equal(normalize({ radius: 100, semanticHarmony: -5 }).radius, 0.5);
+/** Resolve a mode's token to a color from the exported CSS alone. */
+function cssColors(css: string, mode: "light" | "dark") {
+  const block = (selector: string) => css.split(`${selector} {`)[1].split("\n}")[0];
+  const tokens = new Map<string, string>();
+  for (const source of [block(":root"), block(":root, .light"), ...(mode === "dark" ? [block(".dark")] : [])]) {
+    for (const [, name, value] of source.matchAll(/(--[\w-]+): ([^;]+);/g)) tokens.set(name, value);
+  }
+  const resolve = (name: string): Oklch => {
+    const value = tokens.get(name);
+    assert.ok(value, `missing ${name}`);
+    const reference = /^var\((--[\w-]+)\)$/.exec(value);
+    return reference ? resolve(reference[1]) : parse(value)!;
+  };
+  return resolve;
+}
 
-    assert.equal(normalize({ radius: -1 }).radius, 0);
-  });
-
-  it("preserves the existing tonal and complementary hue relationships", () => {
-    for (const hue of [0, 80, 220, 359]) {
-      const tonal = generatePalette({ recipe: "tonal", hue }).theme;
-      assert.equal(tonal.seeds.primary.h, hue);
-      assert.equal(tonal.seeds.secondary.h, hue);
-      const soft = generatePalette({ recipe: "soft", hue }).theme;
-      assert.equal(soft.seeds.primary.h, (hue + 215) % 360);
-      assert.equal(soft.seeds.secondary.h, (hue + 310) % 360);
-    }
-  });
-
-  it("keeps status hues and sufficient chroma independent of brand hue and quiet settings", () => {
-    for (const mood of [0, 50, 100]) for (const depth of [0, 50, 100]) {
-      const baseline = generatePalette({ hue: 0, mood, depth }).theme;
-      for (const [role, hue] of Object.entries(STATUS_HUES)) {
-        const key = role as keyof typeof STATUS_HUES;
-        assert.equal(baseline.seeds[key].h, hue);
-        assert.ok(baseline.seeds[key].c >= 0.13, `${key} lost its color`);
-        for (const mode of ["light", "dark"] as const) {
-          const colors = baseline.semantic[mode][key];
-          assert.ok(colors.text.c >= (mode === "light" ? 0.09 : 0.035), `${mode} ${key} text lost its color`);
-          if (mode === "light") {
-            assert.ok(colors.text.l >= 0.42, `${key} text became near-black`);
-            assert.ok(colors.fill.l > colors.text.l, `${key} fill should be brighter than text`);
-            assert.ok(colors.fill.c >= 0.11, `${key} fill lost its color`);
-          }
-        }
-        for (const brandHue of [90, 180, 270]) {
-          assert.deepEqual(generatePalette({ hue: brandHue, mood, depth }).theme.seeds[key], baseline.seeds[key]);
-        }
-      }
-    }
-  });
-
-  it("keeps tonal primary and secondary distinct even when primary is gamut-limited", () => {
-    for (let hue = 0; hue < 360; hue += 5) for (const mood of [0, 100]) {
-      const { primary, secondary } = generatePalette({ recipe: "tonal", hue, mood }).theme.seeds;
-      assert.equal(primary.h, secondary.h);
-      assert.ok(secondary.c < primary.c * 0.46);
-      assert.ok(primary.c - secondary.c > 0.03);
-    }
-  });
-
-  it("shows base brand colors consistently while background/text follow the active mode", () => {
-    const palette = generatePalette({ recipe: "soft", hue: 210, mood: 0, depth: 0 });
-    const light = corePaletteColors(palette, "light");
-    const dark = corePaletteColors(palette, "dark");
-    assert.deepEqual(light.map(swatch => swatch.label), ["Background", "Text", "Primary", "Secondary"]);
-    assert.deepEqual(light[0].color, palette.colors.canvas);
-    assert.deepEqual(dark[0].color, palette.theme.scales.neutral[950]);
-    assert.deepEqual(light[1].color, palette.theme.scales.neutral[900]);
-    assert.deepEqual(dark[1].color, palette.theme.scales.neutral[100]);
-    for (const swatches of [light, dark]) {
-      assert.notDeepEqual(swatches[2].color, palette.colors.accent);
-      assert.notDeepEqual(swatches[3].color, palette.colors.support);
-      assert.ok(swatches.every(swatch => inGamut(swatch.color)));
-    }
-    assert.equal(light[2].token, "--ui-color-primary-500");
-    assert.equal(light[3].token, "--ui-color-secondary-500");
-    assert.deepEqual(light[2].color, palette.theme.seeds.primary);
-    assert.deepEqual(light[3].color, palette.theme.seeds.secondary);
-    assert.deepEqual(light[2].color, dark[2].color);
-    assert.deepEqual(light[3].color, dark[3].color);
-    assert.ok(light[2].color.l >= 0.6);
-    assert.ok(light[3].color.l >= 0.6);
-  });
-
-  it("exports the documented token contract, both modes, and no unresolved aliases", () => {
-    const p = generatePalette({});
-    const css = exportCSS(p);
-    for (const role of THEME_ROLES) for (const shade of SHADES) assert.ok(css.includes(`--ui-color-${role}-${shade}:`));
-    for (const suffix of ["text-dimmed", "text-muted", "text-toned", "text", "text-highlighted", "text-inverted", "bg", "bg-muted", "bg-elevated", "bg-accented", "bg-inverted", "border", "border-muted", "border-accented", "border-inverted"]) {
-      assert.ok(p.theme.modes.light[`--ui-${suffix}`]);
-      assert.ok(p.theme.modes.dark[`--ui-${suffix}`]);
-    }
-    for (const token of ["--ui-radius", "--ui-container", "--ui-header-height", "--font-sans", "--font-mono", "--font-display"]) assert.ok(css.includes(`${token}:`));
-    assert.ok(css.includes(".dark {"));
-    assert.ok(css.includes(":root, .light {"));
-    assert.ok(css.includes("--ui-radius: 0.125rem"));
-    assert.ok(css.includes("@theme {"));
-    assert.doesNotMatch(css, /--(?:palette|lavette)-|--(?:ink|canvas|support|accent|surface|action|on-action|text|line|soft):/);
-    for (const [, token] of css.matchAll(/(--[\w-]+)\s*:/g)) {
-      assert.match(token, /^--(?:ui-|font-|leading-)/);
-    }
-    assert.equal((css.match(/color-mix\(in oklab/g) ?? []).length, 40);
-    for (const mode of ["light", "dark"] as const) {
-      const all = { ...p.theme.tokens, ...p.theme.modes[mode] };
-      const resolve = (token: string, seen = new Set<string>()): void => {
-        assert.ok(!seen.has(token), `cyclic token ${token}`);
-        assert.ok(token in all, `missing token ${token}`);
-        for (const [, reference] of all[token as keyof typeof all].matchAll(/var\((--[\w-]+)\)/g)) resolve(reference, new Set([...seen, token]));
-      };
-      Object.keys(all).forEach(key => resolve(key));
-    }
-  });
-
-  it("matches emitted CSS Oklab interpolation independently", () => {
-    const lab = converter("oklab");
-    for (const recipe of ["tonal", "soft"]) for (const hue of [0, 95, 210, 300]) {
-      const { theme } = generatePalette({ recipe, hue, mood: 100 });
-      for (const role of THEME_ROLES) for (const shade of SHADES) {
-        const css = theme.tokens[`--ui-color-${role}-${shade}`];
-        if (role === "neutral" || shade === 500 || (role in STATUS_HUES && shade > 500)) {
-          assert.deepEqual(converter("oklch")(css), theme.scales[role][shade]);
-          continue;
-        }
-        const [, source, percent, endpoint] = css.match(/var\(--ui-color-([a-z]+)-500\) ([\d.]+)%, (white|black)/)!;
-        assert.equal(source, role);
-        const actual = lab(theme.scales[role][shade]);
-        const expected = interpolate([endpoint, theme.seeds[role]], "oklab")(Number(percent) / 100);
-        for (const axis of ["l", "a", "b"] as const) assert.ok(Math.abs(actual[axis] - expected[axis]) < 1e-12);
-      }
-    }
-  });
-
-  it("exports the same semantic utility treatments and independently verifies their actual pairs", () => {
-    const parse = converter("oklch");
-    for (const recipe of ["tonal", "soft"]) for (const mood of [0, 100]) for (const depth of [0, 100]) for (const paperWarmth of [0, 100]) {
-      const palette = generatePalette({ recipe, mood, depth, paperWarmth });
-      const css = exportCSS(palette);
-      for (const mode of ["light", "dark"] as const) {
-        const dark = mode === "dark";
-        const n = palette.theme.scales.neutral;
-        const surfaces = [dark ? n[950] : palette.colors.canvas, n[dark ? 900 : 50], n[dark ? 800 : 100], n[dark ? 800 : 200]];
-        const tokens = palette.theme.modes[mode];
-        for (const role of THEME_ROLES.filter(role => role !== "neutral")) {
-          const colors = palette.theme.semantic[mode][role];
-          assert.deepEqual(parse(tokens[`--ui-${role}`]), colors.text);
-          for (const [name, color] of Object.entries({ fill: colors.fill, hover: colors.hover, "on-fill": colors.onFill, indicator: colors.indicator, tint: colors.tint })) {
-            assert.deepEqual(parse(tokens[`--ui-${role}-${name}`]), color);
-            assert.ok(css.includes(`--ui-${role}-${name}: ${tokens[`--ui-${role}-${name}`]};`));
-            assert.ok(inGamut(color));
-          }
-          for (const fill of [colors.fill, colors.hover]) assert.ok(wcagContrast(colors.onFill, fill) >= (!dark && role === "warning" ? 7 : 4.5));
-          for (const surface of surfaces) {
-            assert.ok(wcagContrast(colors.text, surface) >= 4.5);
-            assert.ok(wcagContrast(colors.indicator, surface) >= 3);
-            for (const alpha of [0.1, 0.15]) assert.ok(wcagContrast(colors.text, composite(colors.tint, surface, alpha)) >= 4.5);
-          }
-          // Nuxt UI alert descriptions must retain the measured text contrast.
-          assert.ok(css.includes(`.text-${role} [data-slot=description].opacity-90, .bg-${role}.text-inverted [data-slot=description].opacity-90 { opacity: 1; }`));
-          assert.ok(css.includes(`background-color: var(--ui-${role}-fill)`));
-          assert.ok(css.includes(`--ui-text-inverted: var(--ui-${role}-on-fill)`));
-          assert.ok(css.includes(`color-mix(in srgb, var(--ui-${role}-tint) 15%, transparent)`));
-        }
-        if (!dark) {
-          const muted = parse(tokens["--ui-border-muted"])!;
-          const standard = parse(tokens["--ui-border"])!;
-          assert.ok(muted.l > standard.l);
-          assert.ok(standard.l > n[500].l);
-          for (const surface of surfaces) {
-            assert.ok(wcagContrast(muted, surface) >= 1.5);
-            assert.ok(wcagContrast(standard, surface) >= 1.9);
-          }
-        }
-      }
-    }
-  });
-
-  it("keeps all mixed shades in sRGB and measured role pairs readable at control extremes", () => {
-    for (const recipe of ["tonal", "soft"]) for (let hue = 0; hue < 360; hue += 15) {
-      for (const mood of [0, 100]) for (const depth of [0, 100]) for (const paperWarmth of [0, 100]) {
-        const { theme } = generatePalette({ recipe, hue, mood, depth, paperWarmth });
+describe("theme generation", () => {
+  it("stays in gamut with ordered ramps and passes every contrast check at every setting", () => {
+    for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 15) {
+      for (const character of [0, 50, 100]) for (const paperWarmth of [0, 50, 100]) {
+        const { theme } = generatePalette({ harmony, hue, character, paperWarmth });
+        const at = `${harmony} hue=${hue} character=${character} warmth=${paperWarmth}`;
         for (const role of THEME_ROLES) {
           let lastL = 1;
           for (const shade of SHADES) {
             const color = theme.scales[role][shade];
-            assert.ok(inGamut(color), `${role}-${shade} out of gamut: ${JSON.stringify(color)}`);
-            assert.ok(color.l < lastL);
-            assert.equal(color.h, theme.seeds[role].h);
+            assert.ok(inGamut(color), `${at}: ${role}-${shade} out of gamut`);
+            assert.ok(color.l < lastL, `${at}: ${role}-${shade} is not darker than the previous shade`);
             lastL = color.l;
           }
         }
-        for (const [mode, checks] of Object.entries(theme.checks)) for (const check of checks) {
-          assert.ok(check.ratio >= check.target, `${recipe} hue=${hue}, mood=${mood}, depth=${depth}, warmth=${paperWarmth}: ${mode} ${check.label} ${check.ratio} < ${check.target}`);
+        for (const mode of ["light", "dark"] as const) for (const check of theme.checks[mode]) {
+          assert.ok(check.ratio >= check.target, `${at}: ${mode} ${check.label} ${check.ratio} < ${check.target}`);
         }
       }
     }
+  });
+
+  it("keeps the chosen hue for primary and every role distinguishable", () => {
+    for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 5) for (const character of [0, 50, 100]) {
+      const { theme } = generatePalette({ harmony, hue, character });
+      const at = `${harmony} hue=${hue} character=${character}`;
+      assert.equal(theme.hues.primary, hue);
+      for (const [role, { range }] of Object.entries(STATUS)) {
+        const h = theme.hues[role as StatusRole];
+        assert.ok(h >= range[0] && h <= range[1], `${at}: ${role} left its recognizable range`);
+      }
+      for (const mode of ["light", "dark"] as const) {
+        const colors = theme.roles[mode];
+        // A brand hue on top of a status hue can only move the status so far within its range.
+        for (const brand of ["primary", "secondary"] as const) for (const status of Object.keys(STATUS) as StatusRole[]) {
+          assert.ok(deltaE(colors[brand], colors[status]) >= 4, `${at}: ${mode} ${brand} looks like ${status}`);
+        }
+        assert.ok(deltaE(colors.primary, colors.secondary) >= 8, `${at}: ${mode} secondary looks like primary`);
+      }
+      assert.ok(deltaE(theme.scales.secondary[500], theme.scales.neutral[500]) >= 6, `${at}: secondary looks neutral`);
+    }
+  });
+
+  it("tints surfaces with the brand hue, warms them toward paper, and keeps dark mode off black", () => {
+    for (const hue of [0, 120, 185, 260]) for (const character of [0, 100]) {
+      const tinted = generatePalette({ hue, character, paperWarmth: 0 }).theme;
+      assert.ok(hueDistance(tinted.hues.neutral, hue) < 1, "brand tint follows the hue");
+      assert.ok(tinted.scales.neutral[950].c >= 0.0045, "dark surfaces keep the tint");
+      const middle = generatePalette({ hue, character, paperWarmth: 50 }).theme;
+      assert.equal(middle.scales.neutral[500].c, 0, "the midpoint is neutral, not a third hue");
+      const warm = generatePalette({ hue, character, paperWarmth: 100 }).theme;
+      assert.ok(hueDistance(warm.hues.neutral, 80) < 1, "full warmth is warm paper");
+      assert.ok(warm.surfaces.dark[0].c >= 0.018, "warm paper carries into dark mode");
+      for (const theme of [tinted, warm]) for (const mode of ["light", "dark"] as const) {
+        const [bg, muted, elevated, accented] = theme.surfaces[mode];
+        const steps = mode === "light" ? [bg.l - muted.l, muted.l - elevated.l, elevated.l - accented.l] : [muted.l - bg.l, elevated.l - muted.l, accented.l - elevated.l];
+        assert.ok(steps.every(step => step >= 0.015), `${mode} surfaces must step apart`);
+      }
+      assert.ok(tinted.surfaces.dark[0].l >= 0.18 && tinted.surfaces.dark[0].l <= 0.22, "dark background is charcoal, not black");
+    }
+  });
+
+  it("drifts yellow ramps toward amber instead of olive", () => {
+    for (const [hue, role] of [[185, "warning"], [95, "primary"]] as const) {
+      const ramp = generatePalette({ hue }).theme.scales[role];
+      assert.ok(ramp[950].h! < ramp[500].h! - 8, `${role}: dark shades must warm toward amber`);
+      assert.ok(ramp[50].h! >= ramp[500].h!);
+    }
+    const { theme } = generatePalette({ hue: 250 });
+    for (const shade of SHADES) assert.equal(theme.scales.primary[shade].h, 250, "non-yellow hues hold constant");
+  });
+
+  it("keeps role colors as vivid as their contrast allows", () => {
+    for (let hue = 0; hue < 360; hue += 30) for (const character of [0, 100]) {
+      const { roles } = generatePalette({ hue, character }).theme;
+      for (const role of ACCENT_ROLES) {
+        assert.ok(roles.light[role].l >= 0.33, `hue ${hue}: light ${role} is near-black`);
+        assert.ok(roles.dark[role].l <= 0.82, `hue ${hue}: dark ${role} is washed out`);
+      }
+    }
+  });
+
+  it("gives each mode distinct text levels", () => {
+    const { theme } = generatePalette({});
+    for (const mode of ["light", "dark"] as const) {
+      const color = cssColors(exportCSS(generatePalette({})), mode);
+      const levels = ["--ui-text-dimmed", "--ui-text-muted", "--ui-text-toned", "--ui-text", "--ui-text-highlighted"].map(token => color(token).l);
+      for (let i = 1; i < levels.length; i++) {
+        assert.ok(Math.abs(levels[i] - levels[i - 1]) >= 0.03, `${mode} text levels ${levels}`);
+      }
+      assert.equal(new Set(theme.surfaces[mode].map(c => c.l)).size, 4);
+    }
+  });
+
+  it("exports the Nuxt UI token contract, resolvable without color-mix", () => {
+    const css = exportCSS(generatePalette({}));
+    for (const role of THEME_ROLES) for (const shade of SHADES) assert.ok(css.includes(`--ui-color-${role}-${shade}: oklch(`));
+    for (const token of ["--ui-radius", "--ui-focus-offset", "--font-sans", "--font-mono", "--font-display", "--leading-display"]) assert.ok(css.includes(`${token}:`));
+    assert.ok(css.includes(":root, .light {") && css.includes(".dark {") && css.includes("@theme {"));
+    assert.ok(!css.includes("color-mix(in oklab"), "ramps are literal OKLCH values");
+    assert.doesNotMatch(css, /\.(?:bg|text|outline|hover|active)[-\\]/, "tokens only: no utility overrides");
+    assert.equal(css.match(/--font-sans:/g)?.length, 1, "fonts are declared once");
+    for (const [, token] of css.matchAll(/(--[\w-]+)\s*:/g)) assert.match(token, /^--(?:ui-|font-|leading-)/);
+    for (const mode of ["light", "dark"] as const) {
+      const color = cssColors(css, mode);
+      for (const suffix of ["bg", "bg-muted", "bg-elevated", "bg-accented", "bg-inverted", "text-dimmed", "text-muted", "text-toned", "text", "text-highlighted", "text-inverted", "border", "border-muted", "border-accented", "border-inverted"]) {
+        assert.ok(inGamut(color(`--ui-${suffix}`)));
+      }
+      for (const role of ACCENT_ROLES) assert.ok(inGamut(color(`--ui-${role}`)));
+    }
+  });
+
+  it("independently verifies every pair Nuxt UI renders with the exported tokens", () => {
+    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const character of [0, 100]) for (const paperWarmth of [0, 100]) {
+      const css = exportCSS(generatePalette({ harmony, hue, character, paperWarmth }));
+      for (const mode of ["light", "dark"] as const) {
+        const color = cssColors(css, mode);
+        const surfaces = ["--ui-bg", "--ui-bg-muted", "--ui-bg-elevated", "--ui-bg-accented"].map(color);
+        const label = color("--ui-text-inverted");
+        for (const surface of surfaces) {
+          for (const text of ["--ui-text-highlighted", "--ui-text", "--ui-text-toned", "--ui-text-muted", "--ui-text-dimmed"]) {
+            assert.ok(wcagContrast(color(text), surface) >= 4.5, `${mode} ${text}`);
+          }
+          assert.ok(wcagContrast(color("--ui-border-accented"), surface) >= 3);
+          assert.ok(wcagContrast(color("--ui-border"), surface) >= 1.5);
+          assert.ok(wcagContrast(color("--ui-border-muted"), surface) >= 1.25);
+        }
+        assert.ok(wcagContrast(label, color("--ui-bg-inverted")) >= 4.5);
+        for (const role of ACCENT_ROLES) {
+          const c = color(`--ui-${role}`);
+          assert.ok(wcagContrast(composite(label, c, 0.9), c) >= 4.5, `${mode} ${role} solid label`);
+          for (const surface of surfaces) {
+            assert.ok(wcagContrast(label, composite(c, surface, 0.75)) >= 4.5, `${mode} ${role} solid hover`);
+            assert.ok(wcagContrast(composite(c, surface, 0.75), surface) >= 4.5, `${mode} ${role} link hover`);
+            for (const alpha of [0, 0.1, 0.15]) {
+              const tint = composite(c, surface, alpha);
+              assert.ok(wcagContrast(composite(c, tint, 0.9), tint) >= 4.5, `${mode} ${role} text on ${alpha} tint`);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("shows the colors the preview uses as swatches", () => {
+    const palette = generatePalette({ harmony: "complementary", hue: 210 });
+    const light = corePaletteColors(palette, "light");
+    const dark = corePaletteColors(palette, "dark");
+    assert.deepEqual(light.map(swatch => swatch.label), ["Background", "Text", "Primary", "Secondary"]);
+    assert.deepEqual(light[0].color, palette.theme.surfaces.light[0]);
+    assert.deepEqual(dark[0].color, palette.theme.surfaces.dark[0]);
+    assert.deepEqual(light[2].color, palette.theme.roles.light.primary);
+    assert.deepEqual(light[3].color, palette.theme.roles.light.secondary);
+    assert.deepEqual(dark[2].color, palette.theme.roles.dark.primary);
   });
 });

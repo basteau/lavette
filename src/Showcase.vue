@@ -742,14 +742,14 @@ const passes = computed(() =>
           <div
             v-for="c in checkedPairs.filter((c) =>
               [
-                'primary text / surfaces',
-                'primary solid label + hover',
-                'Body text / surfaces',
-                'Accented control border / surfaces',
-                'Muted border / surfaces',
-                'Standard border / surfaces',
-                'success soft + hover',
-                'warning solid label + hover',
+                'Body text',
+                'Dimmed text',
+                'Primary text',
+                'Primary button label',
+                'Warning button label',
+                'Error text',
+                'Control border',
+                'Border',
               ].includes(c.label),
             )"
             :key="c.label"
