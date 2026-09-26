@@ -258,12 +258,6 @@ function download() {
                 external
                 size="lg"
                 >Explore components</UButton
-              ><UButton
-                color="neutral"
-                variant="outline"
-                size="lg"
-                @click="save"
-                >{{ isSaved ? "View saved theme" : "Save this theme" }}</UButton
               >
             </div>
           </div>

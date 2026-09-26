@@ -445,6 +445,9 @@ p {
 .two-column > * {
   min-width: 0;
 }
+.two-column.stretch {
+  align-items: stretch;
+}
 .workspace-header {
   padding: 24px;
   display: flex;

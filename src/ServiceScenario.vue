@@ -45,7 +45,7 @@ function remove() {
           <UAlert v-else-if="sync === 'pending'" color="info" variant="soft" icon="i-lucide-refresh-cw" title="Syncing your files" description="Sending the latest changes to your workspace…" />
           <UAlert v-else color="success" variant="soft" icon="i-lucide-circle-check" title="Files are in sync" description="All 12 files are available to your team." />
         </div>
-        <UButton v-if="sync !== 'success'" color="error" :loading="sync === 'pending'" @click="retry">{{ sync === 'pending' ? 'Syncing files' : 'Retry sync' }}</UButton>
+        <UButton v-if="sync !== 'success'" :loading="sync === 'pending'" @click="retry">{{ sync === 'pending' ? 'Syncing files' : 'Retry sync' }}</UButton>
         <UButton v-else color="neutral" variant="outline" @click="sync = 'failed'">Reset sync demo</UButton>
       </div>
     </div>

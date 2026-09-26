@@ -136,7 +136,7 @@ const faq = [
   {
     label: "What changes when I shuffle a theme?",
     content:
-      "Brand colors, their 77 shades, semantic surfaces, and light/dark aliases update together. Your chosen font pairing stays with you. Status hues retain their recognizable meaning.",
+      "All seven color scales, the surfaces, and both modes update together. Your font pairing and corner radius stay with you. Status colors keep their meaning and step aside when your brand hue comes close.",
   },
   {
     label: "How do I use this theme in my project?",
@@ -197,16 +197,6 @@ const passes = computed(() =>
           </button>
         </div>
       </div>
-    </div>
-    <div class="flex flex-wrap gap-2 mt-6">
-      <UBadge
-        v-for="role in THEME_ROLES"
-        :key="role"
-        :color="role"
-        variant="subtle"
-        class="capitalize"
-        >{{ role }}</UBadge
-      >
     </div>
     <SemanticOverview />
   </section>
@@ -332,7 +322,7 @@ const passes = computed(() =>
         {{ activity }}
       </p></UCard
     >
-    <div class="two-column">
+    <div class="two-column stretch">
       <UCard
         ><div class="specimen-label">
           <h3>A place for input</h3>
@@ -410,7 +400,7 @@ const passes = computed(() =>
                 ><UInput placeholder="Disabled state" disabled class="w-full"
               /></UFormField></div></template></UTabs
       ></UCard>
-      <div class="space-y-6">
+      <div class="flex flex-col gap-6">
         <UCard
           ><div class="specimen-label">
             <h3>A little feedback</h3>
@@ -457,7 +447,7 @@ const passes = computed(() =>
               ><span class="font-mono">{{ volume }}%</span>
             </div>
             <UProgress :model-value="volume" /></div></UCard
-        ><UCard
+        ><UCard class="flex-1"
           ><div class="specimen-label">
             <h3>People & presence</h3>
             <code>UAvatar · UChip · UBadge</code>
@@ -558,7 +548,7 @@ const passes = computed(() =>
         >
           <span class="text-sm text-muted">{{ m.label }}</span
           ><strong>{{ m.value }}</strong
-          ><span class="text-xs text-primary">{{ m.change }}</span>
+          ><span class="text-xs text-muted">{{ m.change }}</span>
         </div>
       </div>
       <div class="table-toolbar">
@@ -731,12 +721,12 @@ const passes = computed(() =>
         ><div class="specimen-label">
           <h3>Contrast, considered</h3>
           <UBadge :color="passes ? 'success' : 'warning'" variant="subtle">{{
-            passes ? "Checks passing" : "Needs review"
+            passes ? "All checks pass" : "Needs review"
           }}</UBadge>
         </div>
         <p class="text-sm text-muted mb-5">
-          Measured against generated surfaces and supported hover treatments.
-          These checks describe color pairs, not whole-site accessibility.
+          Worst case across all four surfaces, including tinted and hover
+          states. These checks cover color pairs, not whole-site accessibility.
         </p>
         <div class="space-y-3">
           <div
@@ -756,7 +746,10 @@ const passes = computed(() =>
             class="flex justify-between text-sm gap-3"
           >
             <span>{{ c.label }}</span
-            ><code>{{ c.ratio.toFixed(2) }}:1</code>
+            ><span
+              ><code>{{ c.ratio.toFixed(2) }}:1</code
+              ><span class="text-dimmed"> / {{ c.target }}</span></span
+            >
           </div>
         </div>
         <USeparator class="my-5" />
