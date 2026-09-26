@@ -1,0 +1,5 @@
+interface:
+  display_name: "Better Deploy"
+  short_description: "Simple SSH deployments with a project-owned workflow"
+policy:
+  allow_implicit_invocation: false
