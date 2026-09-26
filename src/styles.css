@@ -168,7 +168,7 @@ p {
   text-wrap: balance;
 }
 .hero-copy > p {
-  max-width: 390px;
+  max-width: 460px;
   font-size: 15px;
   line-height: 1.7;
   color: var(--ui-text-muted);
@@ -236,6 +236,7 @@ p {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  margin-bottom: 32px;
 }
 .core-swatches button {
   text-align: left;
@@ -275,9 +276,25 @@ p {
   margin: 10px 0;
 }
 .section-heading p {
+  max-width: 620px;
   font-size: 14px;
   color: var(--ui-text-muted);
   line-height: 1.6;
+  text-wrap: pretty;
+}
+.section-heading h2 {
+  text-wrap: balance;
+}
+.section-heading code,
+.install-steps p code,
+.install-steps h3 code,
+.install-file p code {
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg-elevated);
+  color: var(--ui-text-highlighted);
+  white-space: nowrap;
 }
 .section-heading > .inline-flex {
   flex-shrink: 0;
@@ -1001,4 +1018,333 @@ p {
 .field-note-art svg {
   width: 100%;
   height: 100%;
+}
+
+/* Hero: what Lavette is and where to go next. */
+.hero-meta {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--ui-text-dimmed);
+}
+
+/* How it works: each step carries a live readout of the current theme. */
+.how-section {
+  padding-top: 40px;
+}
+.how-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--ui-border);
+  border-radius: calc(var(--ui-radius) * 2);
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.how-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px;
+  min-width: 0;
+}
+.how-step + .how-step {
+  border-left: 1px solid var(--ui-border);
+}
+.how-step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.how-step h3,
+.install-steps h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ui-text-highlighted);
+  margin: 0;
+}
+.how-step > p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ui-text-muted);
+  margin: 0;
+  text-wrap: pretty;
+}
+.step-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border-accented);
+  font: 12px var(--font-mono);
+  color: var(--ui-text-highlighted);
+}
+.how-visual {
+  margin-top: auto;
+  padding-top: 12px;
+  min-height: 128px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.how-checks,
+.how-code {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.how-code .code-block {
+  width: 100%;
+  margin: 0;
+  border-radius: var(--ui-radius);
+}
+.how-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.how-stat strong {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--ui-text-highlighted);
+}
+.how-stat span {
+  font-size: 13px;
+  color: var(--ui-text-muted);
+}
+.hue-wheel {
+  position: relative;
+  flex-shrink: 0;
+  width: 116px;
+  aspect-ratio: 1;
+}
+.hue-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mask: radial-gradient(circle, transparent 58%, #000 59%, #000 70%, transparent 71%);
+  opacity: 0.75;
+}
+.hue-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 2px solid var(--ui-bg);
+  transform: rotate(var(--angle)) translateY(-44px);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+.hue-dot.is-brand {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  z-index: 1;
+}
+.hue-legend {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  min-width: 0;
+}
+.hue-legend > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.hue-legend dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ui-text-muted);
+}
+.hue-legend dt i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.hue-legend dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ui-text-highlighted);
+}
+
+/* Light and dark panes scope the exported tokens to their own subtree. */
+.mode-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--ui-border);
+  border-radius: calc(var(--ui-radius) * 2);
+  overflow: hidden;
+}
+.mode-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 28px;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+}
+.mode-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.mode-pane-head code {
+  font-size: 11px;
+  color: var(--ui-text-muted);
+}
+.mode-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: var(--leading-display);
+  color: var(--ui-text-highlighted);
+  margin-bottom: 4px;
+}
+
+/* The code behind the last button pressed in the Actions card. */
+.snippet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 20px;
+  padding: 6px 8px 6px 14px;
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg-muted);
+  border: 1px solid var(--ui-border-muted);
+  font-size: 13px;
+}
+.snippet code {
+  font-size: 12px;
+  color: var(--ui-text-highlighted);
+  overflow-wrap: anywhere;
+}
+
+/* Install */
+.install-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.install-steps {
+  display: grid;
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.install-steps > li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 16px;
+}
+.install-steps > li > div {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.install-steps p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ui-text-muted);
+  margin: 0;
+}
+.code-file {
+  margin: 4px 0 0;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  overflow: hidden;
+}
+.code-file figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px 4px 14px;
+  border-bottom: 1px solid var(--ui-border);
+  font: 11px var(--font-mono);
+  color: var(--ui-text-muted);
+}
+.code-file pre {
+  margin: 0;
+  padding: 14px;
+  background: var(--ui-bg-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ui-text-highlighted);
+}
+.install-file {
+  position: sticky;
+  top: 112px;
+}
+.install-contents {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.install-contents li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.install-contents li > span {
+  flex-shrink: 0;
+  position: relative;
+  top: 2px;
+  color: var(--ui-primary);
+}
+
+@media (max-width: 1200px) {
+  .how-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .how-step + .how-step {
+    border-left: 0;
+    border-top: 1px solid var(--ui-border);
+  }
+  .how-visual {
+    min-height: 0;
+  }
+  .install-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .install-file {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .how-step,
+  .mode-pane {
+    padding: 20px;
+  }
+  .mode-compare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hue-wheel {
+    width: 96px;
+  }
+  .hue-dot {
+    transform: rotate(var(--angle)) translateY(-36px);
+  }
 }

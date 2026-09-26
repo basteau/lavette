@@ -47,8 +47,9 @@ const pairs = ref({ switch: true, check: true, slider: 62 });
   <section id="pairing" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">05 / PRIMARY × SECONDARY</div>
-        <h2>Two colors, one voice.</h2>
+        <div class="eyebrow">06 / PRIMARY × SECONDARY</div>
+        <h2>Primary and secondary, side by side.</h2>
+        <p>Charts, toggles and badges show whether the two colors stay distinct on the same screen.</p>
       </div>
     </div>
     <UCard :ui="{ body: 'sm:p-7' }">

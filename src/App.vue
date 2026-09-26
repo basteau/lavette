@@ -14,6 +14,9 @@ import DesignControls from "./DesignControls.vue";
 import ThemeArt from "./ThemeArt.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 const Showcase = defineAsyncComponent(() => import("./Showcase.vue"));
+const HowItWorks = defineAsyncComponent(() => import("./HowItWorks.vue"));
+const ModeCompare = defineAsyncComponent(() => import("./ModeCompare.vue"));
+const InstallGuide = defineAsyncComponent(() => import("./InstallGuide.vue"));
 const draftKey = "lavette-draft-v1";
 const values = ref(normalize({}));
 try {
@@ -158,7 +161,7 @@ function download() {
     <header class="site-header">
       <a href="#" class="wordmark" aria-label="Lavette home"
         ><span class="brand-mark"><i v-for="n in 4" :key="n" /></span
-        >lavette<span class="brand-caption">a living theme studio</span></a
+        >lavette<span class="brand-caption">Theme studio for Nuxt UI</span></a
       >
       <div class="flex items-center gap-2">
         <UTooltip text="Switch color mode"
@@ -188,7 +191,7 @@ function download() {
     </header>
     <div class="studio-layout">
       <aside class="studio-sidebar">
-        <div class="eyebrow">Your design system</div>
+        <div class="eyebrow">Theme settings</div>
         <p class="sidebar-title">Make it yours.</p>
         <DesignControls v-model="values" />
         <div class="grid grid-cols-2 gap-2">
@@ -212,13 +215,15 @@ function download() {
         <nav aria-label="Showcase sections" class="section-nav">
           <a
             v-for="[id, label, n] in [
-              ['overview', 'Overview', '01'],
-              ['colors', 'Color system', '02'],
-              ['typography', 'Typography', '03'],
-              ['components', 'Components', '04'],
-              ['pairing', 'Color pairing', '05'],
-              ['patterns', 'In practice', '06'],
-              ['tokens', 'Surfaces & tokens', '07'],
+              ['how', 'How it works', '01'],
+              ['modes', 'Light and dark', '02'],
+              ['colors', 'Color scales', '03'],
+              ['typography', 'Typography', '04'],
+              ['components', 'Components', '05'],
+              ['pairing', 'Color pairing', '06'],
+              ['patterns', 'In an app', '07'],
+              ['tokens', 'Tokens', '08'],
+              ['install', 'Install', '09'],
             ]"
             :key="id"
             :href="`#${id}`"
@@ -246,22 +251,34 @@ function download() {
         <section id="overview" class="hero">
           <div class="hero-copy">
             <div class="eyebrow flex items-center gap-2">
-              <span class="status-dot" /> THE THEME, IN ITS ELEMENT
+              <span class="status-dot" /> THEME GENERATOR FOR NUXT UI
             </div>
-            <h1>A little color.<br />A whole new feeling.</h1>
+            <h1>Pick a hue. Get a whole Nuxt&nbsp;UI theme.</h1>
             <p>
-              Shape a theme for your next Nuxt UI project. Fine-tune the colors
-              and type, try real components, then take it with you.
+              Lavette turns a hue and a font pairing into OKLCH color scales,
+              light and dark tokens and matching type. Every component on this
+              page is real Nuxt UI, so you see your theme before you install it.
             </p>
-            <div class="flex flex-wrap gap-3 mt-6">
+            <div class="flex flex-wrap gap-3 mt-7">
               <UButton
                 trailing-icon="i-lucide-arrow-down"
+                to="#install"
+                external
+                size="lg"
+                >Install your theme</UButton
+              ><UButton
                 to="#components"
                 external
                 size="lg"
-                >Explore components</UButton
+                color="neutral"
+                variant="outline"
+                >Browse components</UButton
               >
             </div>
+            <p class="hero-meta">
+              For Nuxt UI 4 and Tailwind CSS 4. Free and MIT licensed, with no
+              account needed.
+            </p>
           </div>
           <div
             class="hero-art"
@@ -274,30 +291,29 @@ function download() {
             </div>
           </div>
         </section>
-        <div class="core-swatches">
-          <button
-            v-for="c in core"
-            :key="c.label"
-            @click="copy(format(c.color))"
-            :aria-label="`Copy ${c.label} color`"
-          >
-            <span
-              class="core-color"
-              :style="{ background: format(c.color) }"
-            /><span class="flex justify-between gap-2"
-              ><strong>{{ c.label }}</strong
-              ><UIcon name="i-lucide-copy" class="size-3.5" /></span
-            ><code>{{ c.token.replace("--ui-", "") }}</code>
-          </button>
-        </div>
+        <HowItWorks :palette="palette" />
+        <ModeCompare />
         <Showcase
           :palette="palette"
           :dark="dark"
           @copy="copy"
           @export="exportOpen = true"
         />
+        <InstallGuide :palette="palette" @copy="copy" @download="download" />
         <footer class="page-footer">
           <span class="wordmark">lavette</span>
+          <p>
+            Theme studio for Nuxt UI 4 and Tailwind CSS 4. Your settings stay
+            in this browser.
+          </p>
+          <UButton
+            variant="link"
+            color="neutral"
+            to="https://github.com/basteau/lavette"
+            target="_blank"
+            icon="i-lucide-github"
+            >Source on GitHub</UButton
+          >
           <UButton
             variant="link"
             color="neutral"
@@ -374,7 +390,9 @@ function download() {
           </div>
           <p class="text-sm text-muted">{{ pair.name }} fonts and your light and dark theme, in one CSS file.</p>
           <p class="text-sm">Save as <code>lavette-theme.css</code> beside your main stylesheet. Import it after Tailwind CSS and Nuxt UI:</p>
-          <pre class="code-block">@import "./lavette-theme.css";</pre>
+          <pre class="code-block">@import "tailwindcss";
+@import "@nuxt/ui";
+@import "./lavette-theme.css";</pre>
           <p class="text-sm text-muted">Fonts load from Google. Fallback fonts are used if Google is unavailable.</p>
         </div>
       </template>

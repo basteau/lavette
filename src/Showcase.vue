@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch, onMounted } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { useHashTarget } from "./hash";
 import SemanticOverview from "./SemanticOverview.vue";
 import ServiceScenario from "./ServiceScenario.vue";
 import PairingShowcase from "./PairingShowcase.vue";
 import ThemeArt from "./ThemeArt.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 import type { Palette } from "./palette";
-import { THEME_ROLES, SHADES } from "./theme";
+import { THEME_ROLES, SHADES, corePaletteColors, format } from "./theme";
 import { fontPairing } from "./fonts";
-// Fragment navigation can run before this asynchronously loaded view exists.
-onMounted(() => {
-  const target = document.getElementById(window.location.hash.slice(1));
-  target?.scrollIntoView({ behavior: "instant" });
-});
+useHashTarget();
 const props = defineProps<{ palette: Palette; dark: boolean }>();
 const emit = defineEmits<{ copy: [text: string]; export: [] }>();
 const pair = computed(() => fontPairing(props.palette.values.fontPairing));
+const core = computed(() => corePaletteColors(props.palette, props.dark ? "dark" : "light"));
+// The last button pressed in the Actions card, as the markup that renders it.
+const snippet = ref("");
 const variants = [
   "solid",
   "outline",
@@ -164,11 +164,27 @@ const passes = computed(() =>
   <section id="colors" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">02 / THE FOUNDATION</div>
-        <h2>A spectrum with purpose.</h2>
-        <p>Click a shade to copy its token.</p>
+        <div class="eyebrow">03 / COLOR SCALES</div>
+        <h2>Seven color scales from one hue.</h2>
+        <p>Primary uses your hue exactly. Status colors stay in their usual hue ranges. Click a swatch to copy its CSS variable.</p>
       </div>
       <UBadge color="neutral" variant="outline">OKLCH · sRGB</UBadge>
+    </div>
+    <div class="core-swatches">
+      <button
+        v-for="c in core"
+        :key="c.label"
+        @click="emit('copy', `var(${c.token})`)"
+        :aria-label="`Copy ${c.label} variable`"
+      >
+        <span
+          class="core-color"
+          :style="{ background: format(c.color) }"
+        /><span class="flex justify-between gap-2"
+          ><strong>{{ c.label }}</strong
+          ><UIcon name="i-lucide-copy" class="size-3.5" /></span
+        ><code>{{ c.token }}</code>
+      </button>
     </div>
     <div class="palette-table">
       <div v-for="role in THEME_ROLES" :key="role" class="palette-row">
@@ -194,8 +210,8 @@ const passes = computed(() =>
   <section id="typography" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">03 / A DISTINCTIVE VOICE</div>
-        <h2>Good type sets the tone.</h2>
+        <div class="eyebrow">04 / TYPOGRAPHY</div>
+        <h2>{{ pair.serif }} for headings, {{ pair.sans }} for text.</h2>
         <p>{{ pair.description }}</p>
       </div>
       <UBadge color="neutral" variant="outline">{{ pair.name }} pairing</UBadge>
@@ -244,8 +260,9 @@ const passes = computed(() =>
   <section id="components" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">04 / THE BUILDING BLOCKS</div>
-        <h2>Small parts. Shared character.</h2>
+        <div class="eyebrow">05 / COMPONENTS</div>
+        <h2>Real Nuxt UI components, styled live.</h2>
+        <p>Nothing here is a mockup. Press a button to see the code that renders it.</p>
       </div>
     </div>
     <UCard class="mb-6" :ui="{ body: 'sm:p-7' }"
@@ -261,8 +278,8 @@ const passes = computed(() =>
             :key="variant"
             :color="role"
             :variant="variant"
-            :aria-label="`${role} ${variant} action`"
-            @click="activity = `${role} ${variant} button pressed.`"
+            :aria-label="`${role} ${variant} button`"
+            @click="snippet = `<UButton color=&quot;${role}&quot; variant=&quot;${variant}&quot;>${variant}</UButton>`"
             >{{ variant }}</UButton
           >
         </div>
@@ -279,7 +296,7 @@ const passes = computed(() =>
           v-for="size in sizes"
           :key="size"
           :size="size"
-          @click="activity = `${size} button pressed.`"
+          @click="snippet = `<UButton size=&quot;${size}&quot;>${size.toUpperCase()}</UButton>`"
           >{{ size.toUpperCase() }}</UButton
         ><UButton disabled>Disabled</UButton><UButton loading>Loading</UButton
         ><UTooltip text="Tooltip"
@@ -308,6 +325,19 @@ const passes = computed(() =>
             >More actions</UButton
           ></UDropdownMenu
         >
+      </div>
+      <div class="snippet" role="status">
+        <code v-if="snippet">{{ snippet }}</code
+        ><span v-else class="text-muted">Press a button above to see its code.</span
+        ><UButton
+          v-if="snippet"
+          icon="i-lucide-copy"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          aria-label="Copy button code"
+          @click="emit('copy', snippet)"
+        />
       </div>
       <p v-if="activity" role="status" class="text-sm text-muted mt-4">
         {{ activity }}
@@ -499,8 +529,9 @@ const passes = computed(() =>
   <section id="patterns" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">06 / PUT IT TO WORK</div>
-        <h2>From tokens to everyday things.</h2>
+        <div class="eyebrow">07 / IN AN APP</div>
+        <h2>The same tokens in a working app.</h2>
+        <p>A dashboard, a release flow and two marketing cards, with no colors outside the theme.</p>
       </div>
     </div>
     <UCard :ui="{ body: 'p-0 sm:p-0' }"
@@ -637,8 +668,9 @@ const passes = computed(() =>
   <section id="tokens" class="specimen-section">
     <div class="section-heading">
       <div>
-        <div class="eyebrow">07 / UNDER THE SURFACE</div>
-        <h2>The quiet details that hold it together.</h2>
+        <div class="eyebrow">08 / TOKENS</div>
+        <h2>Surfaces, text and borders.</h2>
+        <p>Nuxt UI turns each token into a Tailwind class, such as <code>bg-elevated</code>, <code>text-muted</code> or <code>border-accented</code>. Click a surface to copy its variable.</p>
       </div>
       <UBadge color="neutral" variant="outline">{{ dark ? "Dark" : "Light" }} mode</UBadge>
     </div>
