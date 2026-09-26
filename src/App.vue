@@ -172,7 +172,7 @@ function download() {
           icon="i-lucide-bookmark"
           color="neutral"
           variant="ghost"
-          aria-label="Open saved themes"
+          :aria-label="`Collection, ${saved.length} saved`"
           @click="collection = true"
           ><span class="desktop-label">Collection</span
           ><span>{{ saved.length }}</span></UButton
@@ -188,7 +188,7 @@ function download() {
     <div class="studio-layout">
       <aside class="studio-sidebar">
         <div class="eyebrow">Your design system</div>
-        <h2 class="sidebar-title">Make it yours.</h2>
+        <p class="sidebar-title">Make it yours.</p>
         <DesignControls v-model="values" />
         <div class="grid grid-cols-2 gap-2">
           <UButton
