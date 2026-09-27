@@ -12,8 +12,9 @@ settings range.
   the status hues.
 - **Color character** runs from quiet to expressive: chroma, surface tint
   strength, and dark background depth.
-- **Paper warmth** fades a faint tint of the hue out by 50 (neutral grey), then
-  fades warm paper in up to 100. Dark mode keeps the undertone.
+- **Surface tone** fades a faint tint of the hue out by 50 (neutral grey), then
+  fades paper in up to 100. **Paper** picks warm cream (hue 80) or cool slate
+  (hue 250, a little less chroma). Dark mode keeps the undertone.
 
 ## Output
 

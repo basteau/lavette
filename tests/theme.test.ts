@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { converter, differenceCiede2000, wcagContrast, type Oklch } from "culori";
 import { describe, it } from "node:test";
-import { generatePalette, exportCSS, inGamut, type Harmony } from "../src/palette";
+import { generatePalette, exportCSS, inGamut, type Harmony, type Paper } from "../src/palette";
 import { ACCENT_ROLES, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
 
 const parse = converter("oklch");
 const deltaE = differenceCiede2000();
 const HARMONIES: Harmony[] = ["analogous", "complementary"];
+const PAPERS: Paper[] = ["warm", "cool"];
 
 /** Resolve a mode's token to a color from the exported CSS alone. */
 function cssColors(css: string, mode: "light" | "dark") {
@@ -27,9 +28,9 @@ function cssColors(css: string, mode: "light" | "dark") {
 describe("theme generation", () => {
   it("stays in gamut with ordered ramps and passes every contrast check at every setting", () => {
     for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 15) {
-      for (const character of [0, 50, 100]) for (const paperWarmth of [0, 50, 100]) {
-        const { theme } = generatePalette({ harmony, hue, character, paperWarmth });
-        const at = `${harmony} hue=${hue} character=${character} warmth=${paperWarmth}`;
+      for (const character of [0, 50, 100]) for (const surfaceTone of [0, 50, 100]) for (const paper of PAPERS) {
+        const { theme } = generatePalette({ harmony, hue, character, surfaceTone, paper });
+        const at = `${harmony} hue=${hue} character=${character} tone=${surfaceTone} ${paper}`;
         for (const role of THEME_ROLES) {
           let lastL = 1;
           for (const shade of SHADES) {
@@ -67,17 +68,23 @@ describe("theme generation", () => {
     }
   });
 
-  it("tints surfaces with the brand hue, warms them toward paper, and keeps dark mode off black", () => {
+  it("tints surfaces with the brand hue, fades them toward paper, and keeps dark mode off black", () => {
     for (const hue of [0, 120, 185, 260]) for (const character of [0, 100]) {
-      const tinted = generatePalette({ hue, character, paperWarmth: 0 }).theme;
+      const tinted = generatePalette({ hue, character, surfaceTone: 0, paper: "cool" }).theme;
       assert.ok(hueDistance(tinted.hues.neutral, hue) < 1, "brand tint follows the hue");
       assert.ok(tinted.scales.neutral[950].c >= 0.0045, "dark surfaces keep the tint");
-      const middle = generatePalette({ hue, character, paperWarmth: 50 }).theme;
-      assert.equal(middle.scales.neutral[500].c, 0, "the midpoint is neutral, not a third hue");
-      const warm = generatePalette({ hue, character, paperWarmth: 100 }).theme;
-      assert.ok(hueDistance(warm.hues.neutral, 80) < 1, "full warmth is warm paper");
+      for (const paper of PAPERS) {
+        const middle = generatePalette({ hue, character, surfaceTone: 50, paper }).theme;
+        assert.equal(middle.scales.neutral[500].c, 0, "the midpoint is neutral, not a third hue");
+      }
+      const warm = generatePalette({ hue, character, surfaceTone: 100 }).theme;
+      assert.ok(hueDistance(warm.hues.neutral, 80) < 1, "full tone is warm paper by default");
       assert.ok(warm.surfaces.dark[0].c >= 0.018, "warm paper carries into dark mode");
-      for (const theme of [tinted, warm]) for (const mode of ["light", "dark"] as const) {
+      const cool = generatePalette({ hue, character, surfaceTone: 100, paper: "cool" }).theme;
+      assert.ok(hueDistance(cool.hues.neutral, 250) < 1, "cool paper is slate");
+      assert.ok(cool.surfaces.light[0].c >= 0.01 && cool.surfaces.dark[0].c >= 0.01, "cool paper carries into both modes");
+      assert.ok(deltaE(cool.surfaces.light[0], warm.surfaces.light[0]) >= 1.5, "cool and warm paper look different");
+      for (const theme of [tinted, warm, cool]) for (const mode of ["light", "dark"] as const) {
         const [bg, muted, elevated, accented] = theme.surfaces[mode];
         const steps = mode === "light" ? [bg.l - muted.l, muted.l - elevated.l, elevated.l - accented.l] : [muted.l - bg.l, elevated.l - muted.l, accented.l - elevated.l];
         assert.ok(steps.every(step => step >= 0.015), `${mode} surfaces must step apart`);
@@ -137,8 +144,8 @@ describe("theme generation", () => {
   });
 
   it("independently verifies every pair Nuxt UI renders with the exported tokens", () => {
-    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const character of [0, 100]) for (const paperWarmth of [0, 100]) {
-      const css = exportCSS(generatePalette({ harmony, hue, character, paperWarmth }));
+    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const character of [0, 100]) for (const surfaceTone of [0, 100]) for (const paper of PAPERS) {
+      const css = exportCSS(generatePalette({ harmony, hue, character, surfaceTone, paper }));
       for (const mode of ["light", "dark"] as const) {
         const color = cssColors(css, mode);
         const surfaces = ["--ui-bg", "--ui-bg-muted", "--ui-bg-elevated", "--ui-bg-accented"].map(color);

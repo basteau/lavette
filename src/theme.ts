@@ -42,7 +42,8 @@ const GRAPHIC = 3;
 const TINTS = [0, 0.1, 0.15];
 const HOVER = 0.75;
 const DESCRIPTION = 0.9;
-const PAPER_HUE = 80;
+/** Paper stocks the surface tone fades into past its midpoint. */
+const PAPER = { warm: { hue: 80, chroma: 0.02 }, cool: { hue: 250, chroma: 0.014 } } as const;
 const CANVAS_L = 0.975;
 // Full vividness from 300 to 700, falling off toward both ends.
 const CHROMA = { 50: 0.12, 100: 0.25, 200: 0.5, 300: 1, 400: 1, 500: 1, 600: 1, 700: 1, 800: 0.8, 900: 0.62, 950: 0.48 } as const;
@@ -82,7 +83,7 @@ function hueAt(h: number, l: number): number {
   const weight = Math.max(0, 1 - hueDistance(h, 90) / 40);
   return wrap(h + weight * 40 * (l - 0.64));
 }
-const tone = (h: number, c: number) => (l: number) => fit(l, c, hueAt(h, l));
+const ramp = (h: number, c: number) => (l: number) => fit(l, c, hueAt(h, l));
 
 /** The color closest to `start` that passes, moving toward `end`. Every check here only gains
  * contrast in that direction, so bisection finds the boundary. Returns `end` if nothing passes. */
@@ -140,7 +141,8 @@ function rampLightness(l300: number, l700: number): Record<Shade, number> {
 
 export function generateTheme(values: PaletteValues): Theme {
   const character = values.character / 100;
-  const warmth = values.paperWarmth / 100;
+  const tone = values.surfaceTone / 100;
+  const paper = PAPER[values.paper];
 
   // Hues: primary is exactly the chosen hue. Secondary takes the harmony offset that
   // stays clearest of status hues; status hues then step aside from both brand hues.
@@ -153,12 +155,12 @@ export function generateTheme(values: PaletteValues): Theme {
   const hues = { primary: primaryHue, secondary: secondaryHue } as Record<ThemeRole, number>;
   for (const [role, { hue, range }] of Object.entries(STATUS)) hues[role as StatusRole] = clearHue(hue, range, [primaryHue, secondaryHue]);
 
-  // Surfaces: a faint brand tint fades out by warmth 50, then warm paper fades in, so no
-  // setting mixes the two into a third hue. Dark mode keeps the same undertone.
-  const brandTint = Math.max(0, 1 - 2 * warmth) * (0.005 + 0.006 * character);
-  const paperTint = Math.max(0, 2 * warmth - 1) * 0.02;
+  // Surfaces: a faint brand tint fades out by tone 50, then warm or cool paper fades in, so
+  // no setting mixes the two into a third hue. Dark mode keeps the same undertone.
+  const brandTint = Math.max(0, 1 - 2 * tone) * (0.005 + 0.006 * character);
+  const paperTint = Math.max(0, 2 * tone - 1) * paper.chroma;
   const neutralChroma = brandTint || paperTint;
-  hues.neutral = brandTint ? primaryHue : PAPER_HUE;
+  hues.neutral = brandTint ? primaryHue : paper.hue;
   const surface = (l: number) => fit(l, neutralChroma, hues.neutral);
   const darkL = 0.215 - 0.035 * character;
   const canvas = surface(CANVAS_L);
@@ -186,7 +188,7 @@ export function generateTheme(values: PaletteValues): Theme {
   const scales = {} as Theme["scales"];
   const roles: Theme["roles"] = { light: {} as Record<AccentRole, Oklch>, dark: {} as Record<AccentRole, Oklch> };
   for (const role of ACCENT_ROLES) {
-    const make = tone(hues[role], chroma[role]);
+    const make = ramp(hues[role], chroma[role]);
     for (const mode of ["light", "dark"] as const) {
       const label = mode === "light" ? canvas : night;
       const passes = (c: Oklch) => textContrast(c, surfaces[mode]) >= TEXT
@@ -295,7 +297,7 @@ export function exportCSS(palette: Palette): string {
    Import after tailwindcss and @nuxt/ui. Toggle .dark for dark mode.
    Fonts load from Google; allow https://fonts.gstatic.com in font-src if you use a CSP.
    Display headings: font-display font-normal leading-display tracking-normal.
-   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · warmth ${v.paperWarmth} */
+   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · ${v.paper} paper ${v.surfaceTone} */
 
 ${fontFaces(v.fontPairing)}
 

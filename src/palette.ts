@@ -3,11 +3,13 @@ import { generateTheme, type Theme } from "./theme";
 export { exportCSS, format, inGamut } from "./theme";
 
 export type Harmony = "analogous" | "complementary";
+export type Paper = "warm" | "cool";
 export interface PaletteValues {
   harmony: Harmony;
   hue: number;
   character: number;
-  paperWarmth: number;
+  surfaceTone: number;
+  paper: Paper;
   radius: number;
   focusOffset: number;
   fontPairing: string;
@@ -34,7 +36,7 @@ const wrap = (h: number): number => ((h % 360) + 360) % 360;
 const legacyCharacter = ({ mood, depth }: Record<string, unknown>) =>
   mood === undefined ? undefined : (finite(mood, 50) + finite(depth ?? mood, 50)) / 2;
 
-/** Accepts current and legacy saved settings (recipe/mood/depth) and bounds every value. */
+/** Accepts current and legacy saved settings (recipe/mood/depth, paperWarmth) and bounds every value. */
 export function normalize(input: unknown = {}): PaletteValues {
   const values: Record<string, unknown> =
     typeof input === "object" && input !== null && !Array.isArray(input)
@@ -45,7 +47,8 @@ export function normalize(input: unknown = {}): PaletteValues {
     harmony: harmony === "complementary" ? "complementary" : "analogous",
     hue: wrap(Math.round(wrap(finite(values.hue, 185)) * 1000) / 1000),
     character: Math.round(clamp(finite(values.character ?? legacyCharacter(values), 50), 0, 100)),
-    paperWarmth: Math.round(clamp(finite(values.paperWarmth, 30), 0, 100)),
+    surfaceTone: Math.round(clamp(finite(values.surfaceTone ?? values.paperWarmth, 30), 0, 100)),
+    paper: values.paper === "cool" ? "cool" : "warm",
     radius: Math.round(clamp(finite(values.radius, 0.125), 0, 0.5) * 1000) / 1000,
     focusOffset: Math.round(clamp(finite(values.focusOffset, 0), 0, 4)),
     fontPairing: fontPairing(values.fontPairing).id,
@@ -65,6 +68,7 @@ export function randomValues(base: Partial<PaletteValues> = {}): PaletteValues {
     harmony: Math.random() < 0.5 ? "analogous" : "complementary",
     hue: Math.floor(Math.random() * 360),
     character: Math.round(Math.random() * 100),
-    paperWarmth: Math.round(Math.random() * 100),
+    surfaceTone: Math.round(Math.random() * 100),
+    paper: Math.random() < 0.5 ? "warm" : "cool",
   });
 }

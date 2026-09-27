@@ -9,11 +9,12 @@ describe("palette settings", () => {
       assert.ok(Object.values(values).every(value => typeof value === "string" || Number.isFinite(value)));
       assert.deepEqual(normalize(values), values);
     }
-    assert.deepEqual(normalize({ harmony: "complementary", hue: -10, character: 110, paperWarmth: 25 }), {
+    assert.deepEqual(normalize({ harmony: "complementary", hue: -10, character: 110, surfaceTone: 25, paper: "slate" }), {
       harmony: "complementary",
       hue: 350,
       character: 100,
-      paperWarmth: 25,
+      surfaceTone: 25,
+      paper: "warm",
       radius: 0.125,
       focusOffset: 0,
       fontPairing: "studio",
@@ -32,6 +33,10 @@ describe("palette settings", () => {
     assert.equal(normalize({ recipe: "tonal" }).harmony, "analogous");
     assert.equal(normalize({ mood: 80, depth: 40 }).character, 60, "character was the mood/depth average");
     assert.equal(normalize({ hue: null, paperWarmth: "" }).hue, 185, "empty values fall back to defaults");
+    const warmth = normalize({ paperWarmth: 80 });
+    assert.equal(warmth.surfaceTone, 80, "paper warmth became surface tone");
+    assert.equal(warmth.paper, "warm");
+    assert.ok(!("paperWarmth" in warmth));
     assert.equal(normalize({ hue: 359.9999 }).hue, 0);
   });
 
