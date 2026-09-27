@@ -171,6 +171,63 @@ function rampLightness(l300: number, l700: number): Record<Shade, number> {
   };
 }
 
+/** One mode's semantic tokens, and the contrast checks behind them. */
+function modeTokens(mode: ColorMode, { surface, surfaces, darkL, neutral: n, roles }: {
+  surface: (l: number) => Oklch;
+  surfaces: Theme["surfaces"];
+  darkL: number;
+  neutral: Record<Shade, Oklch>;
+  roles: Theme["roles"];
+}): { tokens: Tokens; checks: ContrastCheck[] } {
+  const dark = mode === "dark";
+  const [canvas, night] = [surfaces.light[0], surfaces.dark[0]];
+  const alias = (shade: Shade) => `var(--ui-color-neutral-${shade})`;
+  const [bg, muted, elevated, accented] = surfaces[mode];
+  const inverted = dark ? canvas : night;
+  // Borders are the faintest color meeting each target on every surface.
+  const border = (target: number) => search(surface, dark ? darkL + 0.09 : CANVAS_L - 0.075, dark ? 0.9 : 0.1,
+    color => minContrast(color, surfaces[mode]) >= target);
+  const borders = { muted: border(1.25), standard: border(1.5), accented: border(GRAPHIC) };
+  const text = dark
+    ? { dimmed: 400, muted: 300, toned: 200, text: 100 } as const
+    : { dimmed: 600, muted: 700, toned: 800, text: 900 } as const;
+  const tokens: Tokens = {
+    "--ui-bg": format(bg),
+    "--ui-bg-muted": format(muted),
+    "--ui-bg-elevated": format(elevated),
+    "--ui-bg-accented": format(accented),
+    "--ui-bg-inverted": format(inverted),
+    "--ui-text-dimmed": alias(text.dimmed),
+    "--ui-text-muted": alias(text.muted),
+    "--ui-text-toned": alias(text.toned),
+    "--ui-text": alias(text.text),
+    "--ui-text-highlighted": dark ? format(canvas) : alias(950),
+    "--ui-text-inverted": format(dark ? night : canvas),
+    "--ui-border": format(borders.standard),
+    "--ui-border-muted": format(borders.muted),
+    "--ui-border-accented": format(borders.accented),
+    "--ui-border-inverted": format(inverted),
+  };
+  const checks: ContrastCheck[] = [];
+  const add = (label: string, ratio: number, target = TEXT) => checks.push({ label, ratio, target });
+  add("Body text", minContrast(n[text.text], surfaces[mode]));
+  add("Muted text", minContrast(n[text.muted], surfaces[mode]));
+  add("Dimmed text", minContrast(n[text.dimmed], surfaces[mode]));
+  add("Inverted label", wcagContrast(dark ? night : canvas, inverted));
+  add("Control border", minContrast(borders.accented, surfaces[mode]), GRAPHIC);
+  add("Border", minContrast(borders.standard, surfaces[mode]), 1.5);
+  add("Muted border", minContrast(borders.muted, surfaces[mode]), 1.25);
+  for (const role of ACCENT_ROLES) {
+    const color = roles[mode][role];
+    const name = role[0].toUpperCase() + role.slice(1);
+    tokens[`--ui-${role}`] = `var(--ui-color-${role}-${dark ? 300 : 700})`;
+    add(`${name} text`, textContrast(color, surfaces[mode]));
+    add(`${name} button label`, fillContrast(color, dark ? night : canvas, surfaces[mode]));
+    add(`${name} link hover`, hoverContrast(color, surfaces[mode]));
+  }
+  return { tokens, checks };
+}
+
 export function generateTheme(values: PaletteValues): Theme {
   const vividness = values.vividness / 100;
 
@@ -251,58 +308,10 @@ export function generateTheme(values: PaletteValues): Theme {
   };
   for (const role of THEME_ROLES) for (const shade of SHADES) tokens[`--ui-color-${role}-${shade}`] = format(scales[role][shade]);
 
-  const n = scales.neutral;
-  const alias = (shade: Shade) => `var(--ui-color-neutral-${shade})`;
-  const modes = {} as Theme["modes"];
-  const checks = {} as Theme["checks"];
-  for (const mode of ["light", "dark"] as const) {
-    const dark = mode === "dark";
-    const [bg, muted, elevated, accented] = surfaces[mode];
-    const inverted = dark ? canvas : night;
-    // Borders are the faintest color meeting each target on every surface.
-    const border = (target: number) => search(surface, dark ? darkL + 0.09 : CANVAS_L - 0.075, dark ? 0.9 : 0.1,
-      color => minContrast(color, surfaces[mode]) >= target);
-    const borders = { muted: border(1.25), standard: border(1.5), accented: border(GRAPHIC) };
-    const text = dark
-      ? { dimmed: 400, muted: 300, toned: 200, text: 100 } as const
-      : { dimmed: 600, muted: 700, toned: 800, text: 900 } as const;
-    const m: Tokens = {
-      "--ui-bg": format(bg),
-      "--ui-bg-muted": format(muted),
-      "--ui-bg-elevated": format(elevated),
-      "--ui-bg-accented": format(accented),
-      "--ui-bg-inverted": format(inverted),
-      "--ui-text-dimmed": alias(text.dimmed),
-      "--ui-text-muted": alias(text.muted),
-      "--ui-text-toned": alias(text.toned),
-      "--ui-text": alias(text.text),
-      "--ui-text-highlighted": dark ? format(canvas) : alias(950),
-      "--ui-text-inverted": format(dark ? night : canvas),
-      "--ui-border": format(borders.standard),
-      "--ui-border-muted": format(borders.muted),
-      "--ui-border-accented": format(borders.accented),
-      "--ui-border-inverted": format(inverted),
-    };
-    const list: ContrastCheck[] = [];
-    const add = (label: string, ratio: number, target = TEXT) => list.push({ label, ratio, target });
-    add("Body text", minContrast(n[text.text], surfaces[mode]));
-    add("Muted text", minContrast(n[text.muted], surfaces[mode]));
-    add("Dimmed text", minContrast(n[text.dimmed], surfaces[mode]));
-    add("Inverted label", wcagContrast(dark ? night : canvas, inverted));
-    add("Control border", minContrast(borders.accented, surfaces[mode]), GRAPHIC);
-    add("Border", minContrast(borders.standard, surfaces[mode]), 1.5);
-    add("Muted border", minContrast(borders.muted, surfaces[mode]), 1.25);
-    for (const role of ACCENT_ROLES) {
-      const color = roles[mode][role];
-      const name = role[0].toUpperCase() + role.slice(1);
-      m[`--ui-${role}`] = `var(--ui-color-${role}-${dark ? 300 : 700})`;
-      add(`${name} text`, textContrast(color, surfaces[mode]));
-      add(`${name} button label`, fillContrast(color, dark ? night : canvas, surfaces[mode]));
-      add(`${name} link hover`, hoverContrast(color, surfaces[mode]));
-    }
-    modes[mode] = m;
-    checks[mode] = list;
-  }
+  const context = { surface, surfaces, darkL, neutral: scales.neutral, roles };
+  const light = modeTokens("light", context), dark = modeTokens("dark", context);
+  const modes = { light: light.tokens, dark: dark.tokens };
+  const checks = { light: light.checks, dark: dark.checks };
   return { hues, scales, surfaces, roles, brandShade, tokens, modes, checks };
 }
 
