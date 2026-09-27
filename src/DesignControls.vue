@@ -8,6 +8,7 @@ const sliders = computed(() => [
   { key: 'hue', label: 'Hue', max: 359, step: 1, unit: '°' },
   { key: 'character', label: 'Color character', max: 100, step: 1, unit: '', ends: ['Quiet', 'Expressive'] },
   { key: 'surfaceTone', label: 'Surface tone', max: 100, step: 1, unit: '', ends: ['Brand tint', values.value.paper === 'cool' ? 'Cool paper' : 'Warm paper'] },
+  { key: 'darkDepth', label: 'Dark mode depth', max: 100, step: 1, unit: '', ends: ['Soft charcoal', 'Near black'] },
   { key: 'radius', label: 'Corner radius', max: 0.5, step: 0.025, unit: 'rem' },
 ] as const);
 // normalize() bounds every control value, whatever the component emits.

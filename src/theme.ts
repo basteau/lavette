@@ -45,6 +45,8 @@ const DESCRIPTION = 0.9;
 /** Paper stocks the surface tone fades into past its midpoint. */
 const PAPER = { warm: { hue: 80, chroma: 0.02 }, cool: { hue: 250, chroma: 0.014 } } as const;
 const CANVAS_L = 0.975;
+/** Dark mode background lightness, from soft charcoal to near black. */
+export const DARK_L = { soft: 0.235, deep: 0.15 } as const;
 // Full vividness from 300 to 700, falling off toward both ends.
 const CHROMA = { 50: 0.12, 100: 0.25, 200: 0.5, 300: 1, 400: 1, 500: 1, 600: 1, 700: 1, 800: 0.8, 900: 0.62, 950: 0.48 } as const;
 
@@ -162,7 +164,7 @@ export function generateTheme(values: PaletteValues): Theme {
   const neutralChroma = brandTint || paperTint;
   hues.neutral = brandTint ? primaryHue : paper.hue;
   const surface = (l: number) => fit(l, neutralChroma, hues.neutral);
-  const darkL = 0.215 - 0.035 * character;
+  const darkL = DARK_L.soft - (DARK_L.soft - DARK_L.deep) * values.darkDepth / 100;
   const canvas = surface(CANVAS_L);
   const night = surface(darkL);
   const surfaces: Theme["surfaces"] = {
@@ -297,7 +299,7 @@ export function exportCSS(palette: Palette): string {
    Import after tailwindcss and @nuxt/ui. Toggle .dark for dark mode.
    Fonts load from Google; allow https://fonts.gstatic.com in font-src if you use a CSP.
    Display headings: font-display font-normal leading-display tracking-normal.
-   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · ${v.paper} paper ${v.surfaceTone} */
+   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · ${v.paper} paper ${v.surfaceTone} · dark depth ${v.darkDepth} */
 
 ${fontFaces(v.fontPairing)}
 

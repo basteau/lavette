@@ -10,11 +10,14 @@ settings range.
 - **Color relationship** puts secondary beside the hue (**Analogous**, ±40°) or
   opposite it (**Complementary**, 180° ±20°), whichever offset is farthest from
   the status hues.
-- **Color character** runs from quiet to expressive: chroma, surface tint
-  strength, and dark background depth.
+- **Color character** runs from quiet to expressive: chroma and surface tint
+  strength.
 - **Surface tone** fades a faint tint of the hue out by 50 (neutral grey), then
   fades paper in up to 100. **Paper** picks warm cream (hue 80) or cool slate
   (hue 250, a little less chroma). Dark mode keeps the undertone.
+- **Dark mode depth** sets the dark background from soft charcoal (L 0.235) to
+  near black (L 0.15). Themes saved before this setting keep the depth their
+  character gave them.
 
 ## Output
 
@@ -27,7 +30,7 @@ The CSS contains only tokens, plus a native `:focus-visible` fallback:
   are the lightnesses nearest the middle at which all of them stay readable.
   The rest of the scale spaces out around them.
 - Surface, text, and border tokens for both modes. Light mode is paper
-  (L 0.975); dark mode is tinted charcoal (L 0.18–0.215, by character).
+  (L 0.975); dark mode is tinted charcoal (L 0.15–0.235, by depth).
 - Fonts in `@theme`, and radius and focus offset in `:root`.
 
 Status hues stay within recognizable ranges (success 130–165°, info 225–270°,

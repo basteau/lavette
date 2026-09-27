@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { converter, differenceCiede2000, wcagContrast, type Oklch } from "culori";
 import { describe, it } from "node:test";
 import { generatePalette, exportCSS, inGamut, type Harmony, type Paper } from "../src/palette";
-import { ACCENT_ROLES, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
+import { ACCENT_ROLES, DARK_L, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
 
 const parse = converter("oklch");
 const deltaE = differenceCiede2000();
@@ -28,9 +28,9 @@ function cssColors(css: string, mode: "light" | "dark") {
 describe("theme generation", () => {
   it("stays in gamut with ordered ramps and passes every contrast check at every setting", () => {
     for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 15) {
-      for (const character of [0, 50, 100]) for (const surfaceTone of [0, 50, 100]) for (const paper of PAPERS) {
-        const { theme } = generatePalette({ harmony, hue, character, surfaceTone, paper });
-        const at = `${harmony} hue=${hue} character=${character} tone=${surfaceTone} ${paper}`;
+      for (const character of [0, 50, 100]) for (const surfaceTone of [0, 50, 100]) for (const paper of PAPERS) for (const darkDepth of [0, 100]) {
+        const { theme } = generatePalette({ harmony, hue, character, surfaceTone, paper, darkDepth });
+        const at = `${harmony} hue=${hue} character=${character} tone=${surfaceTone} ${paper} depth=${darkDepth}`;
         for (const role of THEME_ROLES) {
           let lastL = 1;
           for (const shade of SHADES) {
@@ -89,7 +89,23 @@ describe("theme generation", () => {
         const steps = mode === "light" ? [bg.l - muted.l, muted.l - elevated.l, elevated.l - accented.l] : [muted.l - bg.l, elevated.l - muted.l, accented.l - elevated.l];
         assert.ok(steps.every(step => step >= 0.015), `${mode} surfaces must step apart`);
       }
-      assert.ok(tinted.surfaces.dark[0].l >= 0.18 && tinted.surfaces.dark[0].l <= 0.22, "dark background is charcoal, not black");
+    }
+  });
+
+  it("sets dark mode depth independently of character, from soft charcoal to near black", () => {
+    for (const character of [0, 100]) {
+      const soft = generatePalette({ character, darkDepth: 0 }).theme.surfaces.dark;
+      const deep = generatePalette({ character, darkDepth: 100 }).theme.surfaces.dark;
+      assert.equal(soft[0].l, DARK_L.soft);
+      assert.equal(deep[0].l, DARK_L.deep, "near black, never black");
+    }
+    const light = (character: number) => generatePalette({ character, darkDepth: 50 }).theme.surfaces;
+    assert.deepEqual(light(0).dark.map(c => c.l), light(100).dark.map(c => c.l), "character no longer moves the dark background");
+    // Themes saved before this setting keep their dark background (0.215 to 0.18 by character),
+    // within one slider step (0.001).
+    for (const character of [0, 50, 100]) {
+      const legacy = generatePalette({ character }).theme.surfaces.dark[0].l;
+      assert.ok(Math.abs(legacy - (0.215 - 0.035 * character / 100)) <= 0.001, `character ${character}: ${legacy}`);
     }
   });
 
@@ -113,10 +129,11 @@ describe("theme generation", () => {
     }
   });
 
-  it("gives each mode distinct text levels", () => {
-    const { theme } = generatePalette({});
-    for (const mode of ["light", "dark"] as const) {
-      const color = cssColors(exportCSS(generatePalette({})), mode);
+  it("gives each mode distinct text levels at every dark depth", () => {
+    for (const darkDepth of [0, 50, 100]) for (const mode of ["light", "dark"] as const) {
+      const palette = generatePalette({ darkDepth });
+      const { theme } = palette;
+      const color = cssColors(exportCSS(palette), mode);
       const levels = ["--ui-text-dimmed", "--ui-text-muted", "--ui-text-toned", "--ui-text", "--ui-text-highlighted"].map(token => color(token).l);
       for (let i = 1; i < levels.length; i++) {
         assert.ok(Math.abs(levels[i] - levels[i - 1]) >= 0.03, `${mode} text levels ${levels}`);
@@ -144,8 +161,8 @@ describe("theme generation", () => {
   });
 
   it("independently verifies every pair Nuxt UI renders with the exported tokens", () => {
-    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const character of [0, 100]) for (const surfaceTone of [0, 100]) for (const paper of PAPERS) {
-      const css = exportCSS(generatePalette({ harmony, hue, character, surfaceTone, paper }));
+    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const character of [0, 100]) for (const surfaceTone of [0, 100]) for (const paper of PAPERS) for (const darkDepth of [0, 100]) {
+      const css = exportCSS(generatePalette({ harmony, hue, character, surfaceTone, paper, darkDepth }));
       for (const mode of ["light", "dark"] as const) {
         const color = cssColors(css, mode);
         const surfaces = ["--ui-bg", "--ui-bg-muted", "--ui-bg-elevated", "--ui-bg-accented"].map(color);

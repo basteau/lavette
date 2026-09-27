@@ -1,5 +1,5 @@
 import { DEFAULT_FONT_PAIRING, fontPairing } from "./fonts";
-import { generateTheme, type Theme } from "./theme";
+import { DARK_L, generateTheme, type Theme } from "./theme";
 export { exportCSS, format, inGamut } from "./theme";
 
 export type Harmony = "analogous" | "complementary";
@@ -10,6 +10,7 @@ export interface PaletteValues {
   character: number;
   surfaceTone: number;
   paper: Paper;
+  darkDepth: number;
   radius: number;
   focusOffset: number;
   fontPairing: string;
@@ -36,6 +37,10 @@ const wrap = (h: number): number => ((h % 360) + 360) % 360;
 const legacyCharacter = ({ mood, depth }: Record<string, unknown>) =>
   mood === undefined ? undefined : (finite(mood, 50) + finite(depth ?? mood, 50)) / 2;
 
+// Dark mode depth used to follow character: background L 0.215 (quiet) to 0.18 (expressive).
+const legacyDarkDepth = (character: number) =>
+  (DARK_L.soft - (0.215 - 0.035 * character / 100)) / (DARK_L.soft - DARK_L.deep) * 100;
+
 /** Accepts current and legacy saved settings (recipe/mood/depth, paperWarmth) and bounds every value. */
 export function normalize(input: unknown = {}): PaletteValues {
   const values: Record<string, unknown> =
@@ -43,12 +48,14 @@ export function normalize(input: unknown = {}): PaletteValues {
       ? (input as Record<string, unknown>)
       : {};
   const harmony = values.harmony ?? (values.recipe === "soft" ? "complementary" : "analogous");
+  const character = Math.round(clamp(finite(values.character ?? legacyCharacter(values), 50), 0, 100));
   return {
     harmony: harmony === "complementary" ? "complementary" : "analogous",
     hue: wrap(Math.round(wrap(finite(values.hue, 185)) * 1000) / 1000),
-    character: Math.round(clamp(finite(values.character ?? legacyCharacter(values), 50), 0, 100)),
+    character,
     surfaceTone: Math.round(clamp(finite(values.surfaceTone ?? values.paperWarmth, 30), 0, 100)),
     paper: values.paper === "cool" ? "cool" : "warm",
+    darkDepth: Math.round(clamp(finite(values.darkDepth, legacyDarkDepth(character)), 0, 100)),
     radius: Math.round(clamp(finite(values.radius, 0.125), 0, 0.5) * 1000) / 1000,
     focusOffset: Math.round(clamp(finite(values.focusOffset, 0), 0, 4)),
     fontPairing: fontPairing(values.fontPairing).id,
@@ -60,7 +67,7 @@ export function generatePalette(input: unknown): Palette {
   return { values, theme: generateTheme(values) };
 }
 
-/** A new color direction; type, radius, and focus settings carry over from `base`. */
+/** A new color direction; type, radius, focus, and dark depth settings carry over from `base`. */
 export function randomValues(base: Partial<PaletteValues> = {}): PaletteValues {
   return normalize({
     fontPairing: DEFAULT_FONT_PAIRING,

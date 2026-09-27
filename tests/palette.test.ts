@@ -15,6 +15,7 @@ describe("palette settings", () => {
       character: 100,
       surfaceTone: 25,
       paper: "warm",
+      darkDepth: 65,
       radius: 0.125,
       focusOffset: 0,
       fontPairing: "studio",
@@ -23,6 +24,8 @@ describe("palette settings", () => {
     assert.equal(normalize({ radius: -1 }).radius, 0);
     assert.equal(normalize({ focusOffset: -5 }).focusOffset, 0);
     assert.equal(normalize({ focusOffset: 99 }).focusOffset, 4);
+    assert.equal(normalize({ darkDepth: 140 }).darkDepth, 100);
+    assert.equal(normalize({ darkDepth: -3 }).darkDepth, 0);
   });
 
   it("migrates saved themes from the recipe/mood/depth settings", () => {
@@ -40,8 +43,8 @@ describe("palette settings", () => {
     assert.equal(normalize({ hue: 359.9999 }).hue, 0);
   });
 
-  it("shuffles colors while keeping type, radius, and focus settings", () => {
-    const base = normalize({ fontPairing: "library", radius: 0.375, focusOffset: 2 });
+  it("shuffles colors while keeping type, radius, focus, and dark depth settings", () => {
+    const base = normalize({ fontPairing: "library", radius: 0.375, focusOffset: 2, darkDepth: 90 });
     const signatures = new Set<string>();
     for (let i = 0; i < 100; i++) {
       const values = randomValues(base);
@@ -49,6 +52,7 @@ describe("palette settings", () => {
       assert.equal(values.fontPairing, "library");
       assert.equal(values.radius, 0.375);
       assert.equal(values.focusOffset, 2);
+      assert.equal(values.darkDepth, 90);
       signatures.add(JSON.stringify(values));
     }
     assert.ok(signatures.size > 1);
