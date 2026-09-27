@@ -6,24 +6,45 @@ settings range.
 
 ## Controls
 
-- **Brand color** (optional) takes any CSS color, fitted to sRGB and stored as
-  hex. It sets primary's hue and chroma, and lands exactly on the primary shade
-  nearest its lightness that keeps the ramp in order. If it passes every role
-  check it becomes the role color itself (700, or 300 for dark mode). A role
-  color within 0.01 of it steps aside, darker or lighter, to make room. Near-grey
-  colors (chroma below 0.03) are rejected: Surface tone sets the greys.
-- **Hue** is primary's hue, used exactly. A brand color sets it.
-- **Color relationship** puts secondary beside the hue (**Analogous**, ±40°) or
-  opposite it (**Complementary**, 180° ±20°), whichever offset is farthest from
-  the status hues.
-- **Color character** runs from quiet to expressive: chroma and surface tint
-  strength.
-- **Surface tone** fades a faint tint of the hue out by 50 (neutral grey), then
-  fades paper in up to 100. **Paper** picks warm cream (hue 80) or cool slate
-  (hue 250, a little less chroma). Dark mode keeps the undertone.
-- **Dark mode depth** sets the dark background from soft charcoal (L 0.235) to
-  near black (L 0.15). Themes saved before this setting keep the depth their
-  character gave them.
+Each control sets one thing, and each thing has one control.
+
+**Color**
+
+- **Primary hue** is primary's hue, used exactly.
+- **Brand color** (optional) replaces Primary hue. It takes any CSS color,
+  typed or picked, fitted to sRGB and stored as hex, and sets primary's hue and
+  chroma. It lands exactly on the primary shade nearest its lightness that
+  keeps the ramp in order. If it passes every role check it becomes the role
+  color itself (700, or 300 for dark mode). A role color within 0.01 of it
+  steps aside, darker or lighter, to make room. Near-grey colors (chroma below
+  0.03) are rejected: Surface tint sets the greys.
+- **Secondary color** sits beside primary (±40°) or opposite it (180° ±20°),
+  whichever offset is farthest from the status hues. Its chroma follows
+  primary's.
+- **Vividness** runs from muted to vivid: the chroma of primary, secondary, and
+  the status colors. With a brand color, it sets only the status colors.
+
+**Surfaces**
+
+- **Surface tint** picks the undertone of the neutral scale: the primary hue,
+  warm paper (hue 80), or cool slate (hue 250). Dark mode keeps it.
+- **Tint strength** scales it from neutral grey (0) to full (primary 0.011,
+  warm 0.02, cool 0.014 chroma).
+- **Dark mode background** runs from charcoal (L 0.235) to near black (L 0.15).
+
+**Type and shape**
+
+- **Font pairing** sets the display and body families (see Fonts).
+- **Corner radius** sets `--ui-radius`; Nuxt UI derives its radius scale from it.
+- **Focus ring offset** (Advanced) sets the gap between a focused control and
+  its outline.
+
+Shuffle picks a new primary hue, secondary color, vividness, and surface tint,
+and clears any brand color. The other settings stay.
+
+Saved themes from earlier versions migrate without changing how they look:
+Color character becomes Vividness, Paper warmth becomes a surface tint and
+strength, and the dark background keeps the depth character gave it.
 
 ## Output
 

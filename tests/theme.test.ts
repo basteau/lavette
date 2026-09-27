@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { converter, differenceCiede2000, formatHex, wcagContrast, type Oklch } from "culori";
 import { describe, it } from "node:test";
-import { generatePalette, exportCSS, inGamut, type Harmony, type Paper } from "../src/palette";
+import { generatePalette, exportCSS, inGamut, type Harmony, type SurfaceTint } from "../src/palette";
 import { ACCENT_ROLES, DARK_L, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
 
 const parse = converter("oklch");
 const deltaE = differenceCiede2000();
 const HARMONIES: Harmony[] = ["analogous", "complementary"];
-const PAPERS: Paper[] = ["warm", "cool"];
+/** Every surface tint at full strength, plus neutral grey and a half-strength tint. */
+const SURFACES: { surfaceTint: SurfaceTint; tintStrength: number }[] = [
+  { surfaceTint: "primary", tintStrength: 0 }, { surfaceTint: "primary", tintStrength: 100 },
+  { surfaceTint: "warm", tintStrength: 50 }, { surfaceTint: "warm", tintStrength: 100 }, { surfaceTint: "cool", tintStrength: 100 },
+];
 
 /** Resolve a mode's token to a color from the exported CSS alone. */
 function cssColors(css: string, mode: "light" | "dark") {
@@ -28,9 +32,9 @@ function cssColors(css: string, mode: "light" | "dark") {
 describe("theme generation", () => {
   it("stays in gamut with ordered ramps and passes every contrast check at every setting", () => {
     for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 15) {
-      for (const character of [0, 50, 100]) for (const surfaceTone of [0, 50, 100]) for (const paper of PAPERS) for (const darkDepth of [0, 100]) {
-        const { theme } = generatePalette({ harmony, hue, character, surfaceTone, paper, darkDepth });
-        const at = `${harmony} hue=${hue} character=${character} tone=${surfaceTone} ${paper} depth=${darkDepth}`;
+      for (const vividness of [0, 50, 100]) for (const surface of SURFACES) for (const darkDepth of [0, 100]) {
+        const { theme } = generatePalette({ harmony, hue, vividness, ...surface, darkDepth });
+        const at = `${harmony} hue=${hue} vividness=${vividness} ${surface.surfaceTint}=${surface.tintStrength} depth=${darkDepth}`;
         for (const role of THEME_ROLES) {
           let lastL = 1;
           for (const shade of SHADES) {
@@ -48,9 +52,9 @@ describe("theme generation", () => {
   });
 
   it("keeps the chosen hue for primary and every role distinguishable", () => {
-    for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 5) for (const character of [0, 50, 100]) {
-      const { theme } = generatePalette({ harmony, hue, character });
-      const at = `${harmony} hue=${hue} character=${character}`;
+    for (const harmony of HARMONIES) for (let hue = 0; hue < 360; hue += 5) for (const vividness of [0, 50, 100]) {
+      const { theme } = generatePalette({ harmony, hue, vividness });
+      const at = `${harmony} hue=${hue} vividness=${vividness}`;
       assert.equal(theme.hues.primary, hue);
       for (const [role, { range }] of Object.entries(STATUS)) {
         const h = theme.hues[role as StatusRole];
@@ -68,19 +72,19 @@ describe("theme generation", () => {
     }
   });
 
-  it("tints surfaces with the brand hue, fades them toward paper, and keeps dark mode off black", () => {
-    for (const hue of [0, 120, 185, 260]) for (const character of [0, 100]) {
-      const tinted = generatePalette({ hue, character, surfaceTone: 0, paper: "cool" }).theme;
-      assert.ok(hueDistance(tinted.hues.neutral, hue) < 1, "brand tint follows the hue");
+  it("tints surfaces with the primary hue, warm paper, or cool slate, at any strength", () => {
+    for (const hue of [0, 120, 185, 260]) for (const vividness of [0, 100]) {
+      const tinted = generatePalette({ hue, vividness, surfaceTint: "primary", tintStrength: 100 }).theme;
+      assert.ok(hueDistance(tinted.hues.neutral, hue) < 1, "primary tint follows the hue");
       assert.ok(tinted.scales.neutral[950].c >= 0.0045, "dark surfaces keep the tint");
-      for (const paper of PAPERS) {
-        const middle = generatePalette({ hue, character, surfaceTone: 50, paper }).theme;
-        assert.equal(middle.scales.neutral[500].c, 0, "the midpoint is neutral, not a third hue");
+      for (const surfaceTint of ["primary", "warm", "cool"] as const) {
+        const grey = generatePalette({ hue, vividness, surfaceTint, tintStrength: 0 }).theme;
+        assert.equal(grey.scales.neutral[500].c, 0, "strength 0 is neutral grey");
       }
-      const warm = generatePalette({ hue, character, surfaceTone: 100 }).theme;
-      assert.ok(hueDistance(warm.hues.neutral, 80) < 1, "full tone is warm paper by default");
+      const warm = generatePalette({ hue, vividness, surfaceTint: "warm", tintStrength: 100 }).theme;
+      assert.ok(hueDistance(warm.hues.neutral, 80) < 1, "warm paper");
       assert.ok(warm.surfaces.dark[0].c >= 0.018, "warm paper carries into dark mode");
-      const cool = generatePalette({ hue, character, surfaceTone: 100, paper: "cool" }).theme;
+      const cool = generatePalette({ hue, vividness, surfaceTint: "cool", tintStrength: 100 }).theme;
       assert.ok(hueDistance(cool.hues.neutral, 250) < 1, "cool paper is slate");
       assert.ok(cool.surfaces.light[0].c >= 0.01 && cool.surfaces.dark[0].c >= 0.01, "cool paper carries into both modes");
       assert.ok(deltaE(cool.surfaces.light[0], warm.surfaces.light[0]) >= 1.5, "cool and warm paper look different");
@@ -90,31 +94,33 @@ describe("theme generation", () => {
         assert.ok(steps.every(step => step >= 0.015), `${mode} surfaces must step apart`);
       }
     }
+    const surfaces = (vividness: number) => generatePalette({ vividness, surfaceTint: "primary", tintStrength: 60, darkDepth: 50 }).theme.surfaces;
+    assert.deepEqual(surfaces(0), surfaces(100), "vividness leaves surfaces alone");
   });
 
-  it("sets dark mode depth independently of character, from soft charcoal to near black", () => {
-    for (const character of [0, 100]) {
-      const soft = generatePalette({ character, darkDepth: 0 }).theme.surfaces.dark;
-      const deep = generatePalette({ character, darkDepth: 100 }).theme.surfaces.dark;
+  it("sets dark mode depth independently of vividness, from soft charcoal to near black", () => {
+    for (const vividness of [0, 100]) {
+      const soft = generatePalette({ vividness, darkDepth: 0 }).theme.surfaces.dark;
+      const deep = generatePalette({ vividness, darkDepth: 100 }).theme.surfaces.dark;
       assert.equal(soft[0].l, DARK_L.soft);
       assert.equal(deep[0].l, DARK_L.deep, "near black, never black");
     }
-    const light = (character: number) => generatePalette({ character, darkDepth: 50 }).theme.surfaces;
-    assert.deepEqual(light(0).dark.map(c => c.l), light(100).dark.map(c => c.l), "character no longer moves the dark background");
-    // Themes saved before this setting keep their dark background (0.215 to 0.18 by character),
+    const light = (vividness: number) => generatePalette({ vividness, darkDepth: 50 }).theme.surfaces;
+    assert.deepEqual(light(0).dark.map(c => c.l), light(100).dark.map(c => c.l), "vividness no longer moves the dark background");
+    // Themes saved before this setting keep their dark background (0.215 to 0.18 by vividness),
     // within one slider step (0.001).
-    for (const character of [0, 50, 100]) {
-      const legacy = generatePalette({ character }).theme.surfaces.dark[0].l;
-      assert.ok(Math.abs(legacy - (0.215 - 0.035 * character / 100)) <= 0.001, `character ${character}: ${legacy}`);
+    for (const vividness of [0, 50, 100]) {
+      const legacy = generatePalette({ vividness }).theme.surfaces.dark[0].l;
+      assert.ok(Math.abs(legacy - (0.215 - 0.035 * vividness / 100)) <= 0.001, `vividness ${vividness}: ${legacy}`);
     }
   });
 
   it("puts a brand color exactly on the primary ramp without breaking it", () => {
     const brands = ["#1f4fd8", "#ff0000", "#ffff00", "#00ff00", "#1e3a8a", "#0b1a40", "#fde68a", "#bae6fd", "#7c3aed", "#312e81", "#93c5fd", "#0d9488", "#f97316", "#4414e5", "#8dc336", "#4c372a"];
-    for (const brandColor of brands) for (const harmony of HARMONIES) for (const character of [0, 100]) for (const darkDepth of [0, 100]) for (const paper of PAPERS) {
-      const palette = generatePalette({ brandColor, harmony, character, darkDepth, paper, surfaceTone: 100 });
+    for (const brandColor of brands) for (const harmony of HARMONIES) for (const vividness of [0, 100]) for (const darkDepth of [0, 100]) for (const surface of SURFACES) {
+      const palette = generatePalette({ brandColor, harmony, vividness, darkDepth, ...surface });
       const { theme } = palette;
-      const at = `${brandColor} ${harmony} character=${character} depth=${darkDepth} ${paper}`;
+      const at = `${brandColor} ${harmony} vividness=${vividness} depth=${darkDepth} ${surface.surfaceTint}=${surface.tintStrength}`;
       assert.equal(palette.values.brandColor, brandColor, `${at}: brand color was rejected`);
       assert.ok(theme.brandShade !== null, `${at}: no shade took the brand color`);
       const exported = cssColors(exportCSS(palette), "light")(`--ui-color-primary-${theme.brandShade}`);
@@ -150,8 +156,8 @@ describe("theme generation", () => {
   });
 
   it("keeps role colors as vivid as their contrast allows", () => {
-    for (let hue = 0; hue < 360; hue += 30) for (const character of [0, 100]) {
-      const { roles } = generatePalette({ hue, character }).theme;
+    for (let hue = 0; hue < 360; hue += 30) for (const vividness of [0, 100]) {
+      const { roles } = generatePalette({ hue, vividness }).theme;
       for (const role of ACCENT_ROLES) {
         assert.ok(roles.light[role].l >= 0.33, `hue ${hue}: light ${role} is near-black`);
         assert.ok(roles.dark[role].l <= 0.82, `hue ${hue}: dark ${role} is washed out`);
@@ -191,8 +197,8 @@ describe("theme generation", () => {
   });
 
   it("independently verifies every pair Nuxt UI renders with the exported tokens", () => {
-    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const character of [0, 100]) for (const surfaceTone of [0, 100]) for (const paper of PAPERS) for (const darkDepth of [0, 100]) {
-      const css = exportCSS(generatePalette({ harmony, hue, character, surfaceTone, paper, darkDepth }));
+    for (const harmony of HARMONIES) for (const hue of [30, 95, 150, 250]) for (const vividness of [0, 100]) for (const surface of SURFACES) for (const darkDepth of [0, 100]) {
+      const css = exportCSS(generatePalette({ harmony, hue, vividness, ...surface, darkDepth }));
       for (const mode of ["light", "dark"] as const) {
         const color = cssColors(css, mode);
         const surfaces = ["--ui-bg", "--ui-bg-muted", "--ui-bg-elevated", "--ui-bg-accented"].map(color);

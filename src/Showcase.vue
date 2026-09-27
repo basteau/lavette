@@ -138,7 +138,7 @@ const faq = [
   {
     label: "What changes when I shuffle a theme?",
     content:
-      "All seven color scales, the surfaces, and both modes update together. Your font pairing and corner radius stay with you. Status colors keep their meaning and step aside when your brand hue comes close.",
+      "Shuffle picks a new primary hue, secondary color, vividness, and surface tint, and clears any brand color. Your font pairing, corner radius, dark mode background, and focus offset stay. Status colors keep their meaning and step aside when your primary hue comes close.",
   },
   {
     label: "How do I use this theme in my project?",
@@ -166,7 +166,7 @@ const passes = computed(() =>
       <div>
         <div class="eyebrow">03 / COLOR SCALES</div>
         <h2>Seven color scales from one hue.</h2>
-        <p>Primary uses your hue exactly. Status colors stay in their usual hue ranges. Click a swatch to copy its CSS variable.</p>
+        <p>Primary uses your hue exactly, or holds your brand color on its nearest shade. Status colors stay in their usual hue ranges. Click a swatch to copy its CSS variable.</p>
       </div>
       <UBadge color="neutral" variant="outline">OKLCH · sRGB</UBadge>
     </div>

@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, useId, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { formatHex } from 'culori';
 import { normalize, parseBrandColor, type PaletteValues } from './palette';
 import { FONT_PAIRINGS, fontPairing } from './fonts';
+import ControlSlider from './ControlSlider.vue';
 const values = defineModel<PaletteValues>({ required: true });
 const props = defineProps<{ brandShade: number | null }>();
-const id = useId();
-const sliders = computed(() => [
-  { key: 'hue', label: 'Hue', max: 359, step: 1, unit: '°' },
-  { key: 'character', label: 'Color character', max: 100, step: 1, unit: '', ends: ['Quiet', 'Expressive'] },
-  { key: 'surfaceTone', label: 'Surface tone', max: 100, step: 1, unit: '', ends: ['Brand tint', values.value.paper === 'cool' ? 'Cool paper' : 'Warm paper'] },
-  { key: 'darkDepth', label: 'Dark mode depth', max: 100, step: 1, unit: '', ends: ['Soft charcoal', 'Near black'] },
-  { key: 'radius', label: 'Corner radius', max: 0.5, step: 0.025, unit: 'rem' },
-] as const);
 // normalize() bounds every control value, whatever the component emits.
 function update(key: keyof PaletteValues, next: unknown) {
   values.value = normalize({ ...values.value, [key]: next });
@@ -47,54 +40,63 @@ function pickBrand(hex: string | undefined) {
 }
 const brandHelp = computed(() => {
   const shade = props.brandShade;
-  if (!values.value.brandColor) return 'Optional. Pick one, or paste a hex, rgb(), or oklch() color, to build primary around it.';
+  if (!values.value.brandColor) return 'Optional. Used exactly in primary, instead of Primary hue.';
   if (shade === 700) return 'Exact at primary-700, the light mode button and link color.';
   if (shade === 300) return 'Exact at primary-300, the dark mode button and link color.';
-  if (shade === null) return 'Sets primary’s hue and chroma.';
+  if (shade === null) return 'Sets primary’s hue and vividness.';
   return `Exact at primary-${shade}. Buttons use 700 in light mode and 300 in dark to stay readable.`;
 });
 </script>
 <template>
   <div class="sidebar-controls">
-    <UFormField label="Color relationship" :description="values.harmony === 'analogous' ? 'Secondary sits beside your hue.' : 'Secondary sits opposite your hue.'">
-      <USelect :model-value="values.harmony" @update:model-value="update('harmony', $event)" :items="[{ label: 'Analogous', value: 'analogous' }, { label: 'Complementary', value: 'complementary' }]" class="w-full" />
-    </UFormField>
-    <UFormField label="Font pairing" :description="`${pairing.serif} + ${pairing.sans}`">
-      <USelect :model-value="values.fontPairing" @update:model-value="update('fontPairing', $event)" :items="FONT_PAIRINGS.map(p => ({ label: p.name, value: String(p.id) }))" class="w-full" />
-    </UFormField>
-    <UFormField label="Paper" :description="values.paper === 'warm' ? 'Toned surfaces lean cream.' : 'Toned surfaces lean slate.'">
-      <USelect :model-value="values.paper" @update:model-value="update('paper', $event)" :items="[{ label: 'Warm', value: 'warm' }, { label: 'Cool', value: 'cool' }]" class="w-full" />
-    </UFormField>
-    <UFormField label="Brand color" :description="brandHelp" :error="brandError || undefined">
-      <UInput v-model="brandDraft" placeholder="#1f4fd8" spellcheck="false" autocomplete="off" class="w-full font-mono" :ui="{ leading: 'ps-1', trailing: 'pe-1' }" @change="commitBrand" @keydown.enter="commitBrand">
-        <template #leading>
-          <UPopover @update:open="openPicker">
-            <UButton color="neutral" variant="ghost" size="sm" square aria-label="Pick brand color">
-              <span class="brand-swatch" :style="{ background: values.brandColor || 'transparent' }" />
-            </UButton>
-            <template #content>
-              <div class="p-2" @pointerdown.capture="picking = true">
-                <UColorPicker :model-value="pickerColor" @update:model-value="pickBrand" />
-              </div>
+    <fieldset class="control-group">
+      <legend class="eyebrow">Color</legend>
+      <div class="control-group-body">
+        <ControlSlider label="Primary hue" :value="values.brandColor ? 'Set by brand color' : `${Math.round(values.hue)}°`" :model-value="values.hue" @update:model-value="update('hue', $event)" :max="359" :step="1" :disabled="!!values.brandColor" />
+        <UFormField label="Brand color" :description="brandHelp" :error="brandError || undefined">
+          <UInput v-model="brandDraft" placeholder="Pick or paste a color" spellcheck="false" autocomplete="off" class="w-full font-mono" :ui="{ leading: 'ps-1', trailing: 'pe-1' }" @change="commitBrand" @keydown.enter="commitBrand">
+            <template #leading>
+              <UPopover @update:open="openPicker">
+                <UButton color="neutral" variant="ghost" size="sm" square aria-label="Pick brand color">
+                  <span class="brand-swatch" :style="{ background: values.brandColor || 'transparent' }" />
+                </UButton>
+                <template #content>
+                  <div class="p-2" @pointerdown.capture="picking = true">
+                    <UColorPicker :model-value="pickerColor" @update:model-value="pickBrand" />
+                  </div>
+                </template>
+              </UPopover>
             </template>
-          </UPopover>
-        </template>
-        <template v-if="values.brandColor" #trailing>
-          <UButton icon="i-lucide-x" color="neutral" variant="link" size="sm" aria-label="Clear brand color" @click="update('brandColor', '')" />
-        </template>
-      </UInput>
-    </UFormField>
-    <div v-for="s in sliders" :key="s.key" class="slider-field">
-      <div class="flex justify-between text-sm">
-        <label :id="`${id}-${s.key}`">{{ s.label }}</label>
-        <span v-if="s.key === 'hue' && values.brandColor" class="text-xs text-muted">From brand color</span>
-        <span v-else class="font-mono text-xs text-muted">{{ values[s.key] }}{{ s.unit }}</span>
+            <template v-if="values.brandColor" #trailing>
+              <UButton icon="i-lucide-x" color="neutral" variant="link" size="sm" aria-label="Clear brand color" @click="update('brandColor', '')" />
+            </template>
+          </UInput>
+        </UFormField>
+        <UFormField label="Secondary color">
+          <USelect :model-value="values.harmony" @update:model-value="update('harmony', $event)" :items="[{ label: 'Beside primary', value: 'analogous' }, { label: 'Opposite primary', value: 'complementary' }]" class="w-full" />
+        </UFormField>
+        <ControlSlider label="Vividness" :value="String(values.vividness)" :model-value="values.vividness" @update:model-value="update('vividness', $event)" :max="100" :step="1" :ends="['Muted', 'Vivid']" :note="values.brandColor ? 'Primary and secondary follow your brand color; this sets the status colors.' : undefined" />
       </div>
-      <USlider :model-value="values[s.key]" @update:model-value="update(s.key, $event)" :aria-labelledby="`${id}-${s.key}`" :max="s.max" :step="s.step" :disabled="s.key === 'hue' && !!values.brandColor" />
-      <div v-if="'ends' in s" class="flex justify-between text-xs text-muted">
-        <span>{{ s.ends[0] }}</span><span>{{ s.ends[1] }}</span>
+    </fieldset>
+    <fieldset class="control-group">
+      <legend class="eyebrow">Surfaces</legend>
+      <div class="control-group-body">
+        <UFormField label="Surface tint">
+          <USelect :model-value="values.surfaceTint" @update:model-value="update('surfaceTint', $event)" :items="[{ label: 'Primary hue', value: 'primary' }, { label: 'Warm paper', value: 'warm' }, { label: 'Cool slate', value: 'cool' }]" class="w-full" />
+        </UFormField>
+        <ControlSlider label="Tint strength" :value="String(values.tintStrength)" :model-value="values.tintStrength" @update:model-value="update('tintStrength', $event)" :max="100" :step="1" :ends="['Grey', 'Tinted']" />
+        <ControlSlider label="Dark mode background" :value="String(values.darkDepth)" :model-value="values.darkDepth" @update:model-value="update('darkDepth', $event)" :max="100" :step="1" :ends="['Charcoal', 'Near black']" />
       </div>
-    </div>
+    </fieldset>
+    <fieldset class="control-group">
+      <legend class="eyebrow">Type and shape</legend>
+      <div class="control-group-body">
+        <UFormField label="Font pairing" :description="`${pairing.serif} + ${pairing.sans}`">
+          <USelect :model-value="values.fontPairing" @update:model-value="update('fontPairing', $event)" :items="FONT_PAIRINGS.map(p => ({ label: p.name, value: String(p.id) }))" class="w-full" />
+        </UFormField>
+        <ControlSlider label="Corner radius" :value="`${values.radius}rem`" :model-value="values.radius" @update:model-value="update('radius', $event)" :max="0.5" :step="0.025" />
+      </div>
+    </fieldset>
     <details class="control-details">
       <summary>Advanced</summary>
       <div class="space-y-6 pt-5">

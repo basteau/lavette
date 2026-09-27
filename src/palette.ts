@@ -1,18 +1,18 @@
 import { clampChroma, converter, formatHex, parse } from "culori";
 import { DEFAULT_FONT_PAIRING, fontPairing } from "./fonts";
-import { DARK_L, generateTheme, type Theme } from "./theme";
+import { DARK_L, SURFACE_TINTS, generateTheme, type Theme } from "./theme";
 export { exportCSS, format, inGamut } from "./theme";
 
 export type Harmony = "analogous" | "complementary";
-export type Paper = "warm" | "cool";
+export type SurfaceTint = "primary" | "warm" | "cool";
 export interface PaletteValues {
   harmony: Harmony;
   hue: number;
-  character: number;
-  surfaceTone: number;
-  paper: Paper;
+  vividness: number;
+  surfaceTint: SurfaceTint;
+  tintStrength: number;
   darkDepth: number;
-  /** An exact primary color as #rrggbb, or "" to derive primary from hue and character. */
+  /** An exact primary color as #rrggbb, or "" to derive primary from hue and vividness. */
   brandColor: string;
   radius: number;
   focusOffset: number;
@@ -46,19 +46,27 @@ export function parseBrandColor(input: unknown): { hex: string } | { error: stri
   const color = parse(text) ?? parse(`#${text}`);
   if (!color) return { error: "Enter a color like #1f4fd8, rgb(31 79 216), or oklch(0.5 0.2 265)." };
   const hex = formatHex(clampChroma(color, "oklch"));
-  if ((oklch(hex)?.c ?? 0) < MIN_BRAND_CHROMA) return { error: "This color is nearly grey. Surface tone sets the greys; choose a more colorful brand color." };
+  if ((oklch(hex)?.c ?? 0) < MIN_BRAND_CHROMA) return { error: "This color is nearly grey. Surface tint sets the greys; choose a more colorful brand color." };
   return { hex };
 }
 
-// Earlier versions showed the average of mood and depth as "Color character".
+// Earlier versions showed the average of mood and depth as "Color character", now vividness.
 const legacyCharacter = ({ mood, depth }: Record<string, unknown>) =>
   mood === undefined ? undefined : (finite(mood, 50) + finite(depth ?? mood, 50)) / 2;
 
-// Dark mode depth used to follow character: background L 0.215 (quiet) to 0.18 (expressive).
-const legacyDarkDepth = (character: number) =>
-  (DARK_L.soft - (0.215 - 0.035 * character / 100)) / (DARK_L.soft - DARK_L.deep) * 100;
+// Dark mode depth used to follow vividness: background L 0.215 (muted) to 0.18 (vivid).
+const legacyDarkDepth = (vividness: number) =>
+  (DARK_L.soft - (0.215 - 0.035 * vividness / 100)) / (DARK_L.soft - DARK_L.deep) * 100;
 
-/** Accepts current and legacy saved settings (recipe/mood/depth, paperWarmth) and bounds every value. */
+// Paper warmth was one slider: a primary tint (scaled by vividness) faded out by 50, then warm
+// paper faded in.
+function legacyTint(warmth: number, vividness: number): { surfaceTint: SurfaceTint; tintStrength: number } {
+  const w = warmth / 100;
+  if (w >= 0.5) return { surfaceTint: "warm", tintStrength: (2 * w - 1) * 100 };
+  return { surfaceTint: "primary", tintStrength: (1 - 2 * w) * (0.005 + 0.006 * vividness / 100) / SURFACE_TINTS.primary.chroma * 100 };
+}
+
+/** Accepts current and legacy saved settings (recipe/mood/depth, character, paperWarmth) and bounds every value. */
 export function normalize(input: unknown = {}): PaletteValues {
   const values: Record<string, unknown> =
     typeof input === "object" && input !== null && !Array.isArray(input)
@@ -67,14 +75,16 @@ export function normalize(input: unknown = {}): PaletteValues {
   const harmony = values.harmony ?? (values.recipe === "soft" ? "complementary" : "analogous");
   const parsed = parseBrandColor(values.brandColor);
   const brand = "hex" in parsed ? parsed.hex : "";
-  const character = Math.round(clamp(finite(values.character ?? legacyCharacter(values), 50), 0, 100));
+  const vividness = Math.round(clamp(finite(values.vividness ?? values.character ?? legacyCharacter(values), 50), 0, 100));
+  const legacy = values.paperWarmth === undefined ? undefined : legacyTint(clamp(finite(values.paperWarmth, 30), 0, 100), vividness);
+  const tint = values.surfaceTint ?? legacy?.surfaceTint;
   return {
     harmony: harmony === "complementary" ? "complementary" : "analogous",
     hue: Math.round(wrap(brand ? oklch(brand)!.h! : finite(values.hue, 185)) * 1000) / 1000 % 360,
-    character,
-    surfaceTone: Math.round(clamp(finite(values.surfaceTone ?? values.paperWarmth, 30), 0, 100)),
-    paper: values.paper === "cool" ? "cool" : "warm",
-    darkDepth: Math.round(clamp(finite(values.darkDepth, legacyDarkDepth(character)), 0, 100)),
+    vividness,
+    surfaceTint: tint === "warm" || tint === "cool" ? tint : "primary",
+    tintStrength: Math.round(clamp(finite(values.tintStrength ?? legacy?.tintStrength, 30), 0, 100)),
+    darkDepth: Math.round(clamp(finite(values.darkDepth, legacyDarkDepth(vividness)), 0, 100)),
     brandColor: brand,
     radius: Math.round(clamp(finite(values.radius, 0.125), 0, 0.5) * 1000) / 1000,
     focusOffset: Math.round(clamp(finite(values.focusOffset, 0), 0, 4)),
@@ -96,8 +106,8 @@ export function randomValues(base: Partial<PaletteValues> = {}): PaletteValues {
     brandColor: "",
     harmony: Math.random() < 0.5 ? "analogous" : "complementary",
     hue: Math.floor(Math.random() * 360),
-    character: Math.round(Math.random() * 100),
-    surfaceTone: Math.round(Math.random() * 100),
-    paper: Math.random() < 0.5 ? "warm" : "cool",
+    vividness: Math.round(Math.random() * 100),
+    surfaceTint: (["primary", "warm", "cool"] as const)[Math.floor(Math.random() * 3)],
+    tintStrength: Math.round(Math.random() * 100),
   });
 }

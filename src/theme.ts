@@ -44,8 +44,8 @@ const GRAPHIC = 3;
 const TINTS = [0, 0.1, 0.15];
 const HOVER = 0.75;
 const DESCRIPTION = 0.9;
-/** Paper stocks the surface tone fades into past its midpoint. */
-const PAPER = { warm: { hue: 80, chroma: 0.02 }, cool: { hue: 250, chroma: 0.014 } } as const;
+/** Surface tints at full strength: the primary hue, warm paper, or cool slate. */
+export const SURFACE_TINTS = { primary: { chroma: 0.011 }, warm: { hue: 80, chroma: 0.02 }, cool: { hue: 250, chroma: 0.014 } } as const;
 const CANVAS_L = 0.975;
 /** Dark mode background lightness, from soft charcoal to near black. */
 export const DARK_L = { soft: 0.235, deep: 0.15 } as const;
@@ -167,9 +167,7 @@ function rampLightness(l300: number, l700: number): Record<Shade, number> {
 }
 
 export function generateTheme(values: PaletteValues): Theme {
-  const character = values.character / 100;
-  const tone = values.surfaceTone / 100;
-  const paper = PAPER[values.paper];
+  const vividness = values.vividness / 100;
 
   // Hues: primary is exactly the chosen hue. Secondary takes the harmony offset that
   // stays clearest of status hues; status hues then step aside from both brand hues.
@@ -182,12 +180,11 @@ export function generateTheme(values: PaletteValues): Theme {
   const hues = { primary: primaryHue, secondary: secondaryHue } as Record<ThemeRole, number>;
   for (const [role, { hue, range }] of Object.entries(STATUS)) hues[role as StatusRole] = clearHue(hue, range, [primaryHue, secondaryHue]);
 
-  // Surfaces: a faint brand tint fades out by tone 50, then warm or cool paper fades in, so
-  // no setting mixes the two into a third hue. Dark mode keeps the same undertone.
-  const brandTint = Math.max(0, 1 - 2 * tone) * (0.005 + 0.006 * character);
-  const paperTint = Math.max(0, 2 * tone - 1) * paper.chroma;
-  const neutralChroma = brandTint || paperTint;
-  hues.neutral = brandTint ? primaryHue : paper.hue;
+  // Surfaces: one faint tint, from the primary hue or from warm or cool paper, at the chosen
+  // strength; 0 is neutral grey. Dark mode keeps the same undertone.
+  const tint = SURFACE_TINTS[values.surfaceTint];
+  const neutralChroma = tint.chroma * values.tintStrength / 100;
+  hues.neutral = "hue" in tint ? tint.hue : primaryHue;
   const surface = (l: number) => fit(l, neutralChroma, hues.neutral);
   const darkL = DARK_L.soft - (DARK_L.soft - DARK_L.deep) * values.darkDepth / 100;
   const canvas = surface(CANVAS_L);
@@ -203,16 +200,16 @@ export function generateTheme(values: PaletteValues): Theme {
 
   // Accent roles. Nuxt UI uses one color per role for text, fills, tints, and hover,
   // so each mode gets the lightness nearest the middle that keeps all of those readable.
-  // A brand color sets primary's chroma; secondary stays clear of neutral even for a muted brand.
+  // A brand color sets primary's chroma, and secondary follows primary, never dropping to neutral.
   const brand = values.brandColor ? exact(oklch(values.brandColor)!) : undefined;
-  const characterChroma = 0.07 + 0.13 * character;
+  const primaryChroma = brand?.c ?? 0.07 + 0.13 * vividness;
   const chroma: Record<AccentRole, number> = {
-    primary: brand?.c ?? characterChroma,
-    secondary: Math.max(brand?.c ?? 0, characterChroma) * (values.harmony === "complementary" ? 0.6 : 0.7),
-    success: 0.14 + 0.06 * character,
-    info: 0.14 + 0.06 * character,
-    warning: 0.14 + 0.06 * character,
-    error: 0.16 + 0.06 * character,
+    primary: primaryChroma,
+    secondary: Math.max(primaryChroma, 0.07) * (values.harmony === "complementary" ? 0.6 : 0.7),
+    success: 0.14 + 0.06 * vividness,
+    info: 0.14 + 0.06 * vividness,
+    warning: 0.14 + 0.06 * vividness,
+    error: 0.16 + 0.06 * vividness,
   };
   const passes = (mode: ColorMode) => (c: Oklch) => {
     const label = mode === "light" ? canvas : night;
@@ -338,7 +335,7 @@ export function exportCSS(palette: Palette): string {
    Import after tailwindcss and @nuxt/ui. Toggle .dark for dark mode.
    Fonts load from Google; allow https://fonts.gstatic.com in font-src if you use a CSP.
    Display headings: font-display font-normal leading-display tracking-normal.
-   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · ${v.paper} paper ${v.surfaceTone} · dark depth ${v.darkDepth}${v.brandColor ? ` · brand ${v.brandColor}` : ""} */
+   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · vividness ${v.vividness} · ${v.surfaceTint} tint ${v.tintStrength} · dark depth ${v.darkDepth}${v.brandColor ? ` · brand ${v.brandColor}` : ""} */
 
 ${fontFaces(v.fontPairing)}
 

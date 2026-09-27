@@ -2,19 +2,21 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { exportCSS, format, generatePalette, normalize, parseBrandColor, randomValues } from "../src/palette";
 
+const pick = ({ surfaceTint, tintStrength }: ReturnType<typeof normalize>) => ({ surfaceTint, tintStrength });
+
 describe("palette settings", () => {
   it("normalizes unknown and out-of-range persisted values", () => {
-    for (const input of [null, undefined, [], "invalid", { hue: Symbol(), character: Infinity }]) {
+    for (const input of [null, undefined, [], "invalid", { hue: Symbol(), vividness: Infinity }]) {
       const values = normalize(input);
       assert.ok(Object.values(values).every(value => typeof value === "string" || Number.isFinite(value)));
       assert.deepEqual(normalize(values), values);
     }
-    assert.deepEqual(normalize({ harmony: "complementary", hue: -10, character: 110, surfaceTone: 25, paper: "slate" }), {
+    assert.deepEqual(normalize({ harmony: "complementary", hue: -10, vividness: 110, surfaceTint: "slate", tintStrength: 25 }), {
       harmony: "complementary",
       hue: 350,
-      character: 100,
-      surfaceTone: 25,
-      paper: "warm",
+      vividness: 100,
+      surfaceTint: "primary",
+      tintStrength: 25,
       darkDepth: 65,
       brandColor: "",
       radius: 0.125,
@@ -29,19 +31,27 @@ describe("palette settings", () => {
     assert.equal(normalize({ darkDepth: -3 }).darkDepth, 0);
   });
 
-  it("migrates saved themes from the recipe/mood/depth settings", () => {
+  it("migrates saved themes from earlier settings", () => {
     const legacy = normalize({ recipe: "soft", hue: 40, mood: 70, depth: 20, paperWarmth: 60, uiSize: "lg" });
     assert.equal(legacy.harmony, "complementary");
-    assert.equal(legacy.character, 45);
+    assert.equal(legacy.vividness, 45);
     assert.ok(!("depth" in legacy) && !("mood" in legacy) && !("uiSize" in legacy));
     assert.equal(normalize({ recipe: "tonal" }).harmony, "analogous");
-    assert.equal(normalize({ mood: 80, depth: 40 }).character, 60, "character was the mood/depth average");
+    assert.equal(normalize({ mood: 80, depth: 40 }).vividness, 60, "vividness was the mood/depth average");
+    assert.equal(normalize({ character: 70 }).vividness, 70, "color character became vividness");
     assert.equal(normalize({ hue: null, paperWarmth: "" }).hue, 185, "empty values fall back to defaults");
-    const warmth = normalize({ paperWarmth: 80 });
-    assert.equal(warmth.surfaceTone, 80, "paper warmth became surface tone");
-    assert.equal(warmth.paper, "warm");
-    assert.ok(!("paperWarmth" in warmth));
     assert.equal(normalize({ hue: 359.9999 }).hue, 0);
+    // Paper warmth faded a primary tint out by 50, then warm paper in.
+    assert.deepEqual(pick(normalize({ paperWarmth: 80 })), { surfaceTint: "warm", tintStrength: 60 });
+    assert.deepEqual(pick(normalize({ paperWarmth: 50 })), { surfaceTint: "warm", tintStrength: 0 });
+    assert.deepEqual(pick(normalize({ paperWarmth: 0, character: 100 })), { surfaceTint: "primary", tintStrength: 100 });
+    for (const [paperWarmth, character] of [[0, 0], [20, 70], [30, 50], [45, 100]]) {
+      const was = (1 - paperWarmth / 50) * (0.005 + 0.006 * character / 100);
+      const now = generatePalette({ paperWarmth, character }).theme.surfaces.light[0].c;
+      assert.ok(Math.abs(now - was) <= 0.0001, `warmth ${paperWarmth}, character ${character}: ${now} vs ${was}`);
+    }
+    const migrated = normalize({ paperWarmth: 80, character: 30 });
+    assert.ok(!("paperWarmth" in migrated) && !("character" in migrated));
   });
 
   it("reads brand colors in any CSS notation as sRGB hex, and rejects greys", () => {

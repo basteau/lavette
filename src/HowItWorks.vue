@@ -28,7 +28,7 @@ const passing = computed(() => total.value - modes.value.reduce((n, m) => n + m.
     <ol class="how-steps">
       <li class="how-step">
         <div class="how-step-head"><span class="step-number">1</span><h3>Tune the settings</h3></div>
-        <p>Choose a hue and whether secondary sits beside it or opposite. Status colors shift away from your hues so they keep their meaning.</p>
+        <p>Choose a hue or a brand color, and whether secondary sits beside it or opposite. Status colors shift away from your hues so they keep their meaning.</p>
         <div class="how-visual">
           <div
             class="hue-wheel"
