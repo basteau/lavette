@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch, watchEffect, onUnmounted, defineAsyncComponent } from "vue";
-import {
-  generatePalette,
-  randomValues,
-  normalize,
-  type PaletteValues,
-} from "./palette";
+import { generatePalette, randomValues, normalize } from "./palette";
 import { themeStyles, fontStyles, corePaletteColors, focusStyles, exportCSS, format } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
+import { useCollection } from "./collection";
 import DesignControls from "./DesignControls.vue";
 import ThemeArt from "./ThemeArt.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
@@ -35,23 +31,7 @@ function notify(title: string, duration = 5000) {
   toast.add({ id: title, title, duration });
 }
 const manualCopy = ref("");
-const storageKey = "palette-lab-favorites-v1";
-type Saved = { id: string; values: PaletteValues };
-const saved = ref<Saved[]>([]);
-let stored: string | null = null;
-try {
-  stored = localStorage.getItem(storageKey);
-} catch {
-  notify("Local storage is unavailable. Themes can still be saved for this visit.", 0);
-}
-try {
-  const data = JSON.parse(stored || "[]");
-  if (Array.isArray(data))
-    saved.value = data
-      .filter((e) => e && typeof e.id === "string")
-      .slice(0, 8)
-      .map((e) => ({ id: e.id, values: normalize(e.values) }));
-} catch { /* Unreadable saved themes are skipped. */ }
+const { saved, isSaved, swatches: savedSwatches, save: saveTheme, remove } = useCollection(values, notify);
 const style = document.createElement("style");
 style.id = "lavette-generated-theme";
 document.head.append(style);
@@ -78,57 +58,9 @@ const core = computed(() =>
   corePaletteColors(palette.value, dark.value ? "dark" : "light"),
 );
 const pair = computed(() => fontPairing(values.value.fontPairing));
-const sameValues = (a: PaletteValues, b: PaletteValues) =>
-  JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
-const isSaved = computed(() => saved.value.some((s) => sameValues(s.values, values.value)));
 function shuffle() {
   values.value = randomValues(values.value);
 }
-function persist() {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(saved.value));
-  } catch {
-    notify("Saved for this visit. Your browser could not write to local storage.", 0);
-  }
-}
-function save() {
-  if (isSaved.value) {
-    collection.value = true;
-    return;
-  }
-  if (saved.value.length >= 8) {
-    collection.value = true;
-    notify("Your collection is full. Remove a theme before saving another.", 0);
-    return;
-  }
-  saved.value.push({ id: crypto.randomUUID(), values: { ...values.value } });
-  notify("Theme saved.");
-  persist();
-}
-function remove(entry: Saved) {
-  const index = saved.value.findIndex((s) => s.id === entry.id);
-  saved.value = saved.value.filter((s) => s.id !== entry.id);
-  persist();
-  toast.add({
-    id: "theme-removed",
-    title: "Theme removed.",
-    duration: 5000,
-    actions: [{
-      label: "Undo",
-      color: "neutral",
-      variant: "outline",
-      onClick: () => {
-        if (saved.value.some((s) => sameValues(s.values, entry.values))) return;
-        if (saved.value.length >= 8) return notify("Your collection is full. Remove a theme before restoring another.", 0);
-        saved.value.splice(Math.min(index, saved.value.length), 0, entry);
-        persist();
-      },
-    }],
-  });
-}
-const savedSwatches = computed(() =>
-  Object.fromEntries(saved.value.map((entry) => [entry.id, corePaletteColors(generatePalette(entry.values), "light")])),
-);
 async function copy(text: string) {
   try {
     await navigator.clipboard.writeText(text);
@@ -148,6 +80,10 @@ function downloadFile(content: BlobPart, filename: string, type = "text/plain") 
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+// Opens the collection when the theme is already saved or there is no room for it.
+function save() {
+  if (!saveTheme()) collection.value = true;
 }
 function download() {
   downloadFile(exportCSS(palette.value), "lavette-theme.css", "text/css");
