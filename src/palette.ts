@@ -1,3 +1,4 @@
+import { clampChroma, converter, formatHex, parse } from "culori";
 import { DEFAULT_FONT_PAIRING, fontPairing } from "./fonts";
 import { DARK_L, generateTheme, type Theme } from "./theme";
 export { exportCSS, format, inGamut } from "./theme";
@@ -11,6 +12,8 @@ export interface PaletteValues {
   surfaceTone: number;
   paper: Paper;
   darkDepth: number;
+  /** An exact primary color as #rrggbb, or "" to derive primary from hue and character. */
+  brandColor: string;
   radius: number;
   focusOffset: number;
   fontPairing: string;
@@ -32,6 +35,20 @@ const finite = (value: unknown, fallback: number): number => {
   }
 };
 const wrap = (h: number): number => ((h % 360) + 360) % 360;
+const oklch = converter("oklch");
+
+/** Below this chroma a color reads as grey; greys come from the neutral scale instead. */
+export const MIN_BRAND_CHROMA = 0.03;
+/** Reads any CSS color, fitted to sRGB, as #rrggbb. Empty input clears the brand color. */
+export function parseBrandColor(input: unknown): { hex: string } | { error: string } {
+  const text = typeof input === "string" ? input.trim() : "";
+  if (!text) return { hex: "" };
+  const color = parse(text) ?? parse(`#${text}`);
+  if (!color) return { error: "Enter a color like #1f4fd8, rgb(31 79 216), or oklch(0.5 0.2 265)." };
+  const hex = formatHex(clampChroma(color, "oklch"));
+  if ((oklch(hex)?.c ?? 0) < MIN_BRAND_CHROMA) return { error: "This color is nearly grey. Surface tone sets the greys; choose a more colorful brand color." };
+  return { hex };
+}
 
 // Earlier versions showed the average of mood and depth as "Color character".
 const legacyCharacter = ({ mood, depth }: Record<string, unknown>) =>
@@ -48,14 +65,17 @@ export function normalize(input: unknown = {}): PaletteValues {
       ? (input as Record<string, unknown>)
       : {};
   const harmony = values.harmony ?? (values.recipe === "soft" ? "complementary" : "analogous");
+  const parsed = parseBrandColor(values.brandColor);
+  const brand = "hex" in parsed ? parsed.hex : "";
   const character = Math.round(clamp(finite(values.character ?? legacyCharacter(values), 50), 0, 100));
   return {
     harmony: harmony === "complementary" ? "complementary" : "analogous",
-    hue: wrap(Math.round(wrap(finite(values.hue, 185)) * 1000) / 1000),
+    hue: Math.round(wrap(brand ? oklch(brand)!.h! : finite(values.hue, 185)) * 1000) / 1000 % 360,
     character,
     surfaceTone: Math.round(clamp(finite(values.surfaceTone ?? values.paperWarmth, 30), 0, 100)),
     paper: values.paper === "cool" ? "cool" : "warm",
     darkDepth: Math.round(clamp(finite(values.darkDepth, legacyDarkDepth(character)), 0, 100)),
+    brandColor: brand,
     radius: Math.round(clamp(finite(values.radius, 0.125), 0, 0.5) * 1000) / 1000,
     focusOffset: Math.round(clamp(finite(values.focusOffset, 0), 0, 4)),
     fontPairing: fontPairing(values.fontPairing).id,
@@ -67,11 +87,13 @@ export function generatePalette(input: unknown): Palette {
   return { values, theme: generateTheme(values) };
 }
 
-/** A new color direction; type, radius, focus, and dark depth settings carry over from `base`. */
+/** A new color direction, which drops any brand color; type, radius, focus, and dark depth
+ * settings carry over from `base`. */
 export function randomValues(base: Partial<PaletteValues> = {}): PaletteValues {
   return normalize({
     fontPairing: DEFAULT_FONT_PAIRING,
     ...base,
+    brandColor: "",
     harmony: Math.random() < 0.5 ? "analogous" : "complementary",
     hue: Math.floor(Math.random() * 360),
     character: Math.round(Math.random() * 100),

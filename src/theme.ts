@@ -21,6 +21,8 @@ export interface Theme {
   surfaces: Record<ColorMode, Oklch[]>;
   /** The single --ui-<role> color per mode, as Nuxt UI uses it for text, fills, and tints. */
   roles: Record<ColorMode, Record<AccentRole, Oklch>>;
+  /** The primary shade that is exactly the brand color, or null without one (or when it can't fit). */
+  brandShade: Shade | null;
   tokens: Tokens;
   modes: Record<ColorMode, Tokens>;
   checks: Record<ColorMode, ContrastCheck[]>;
@@ -51,6 +53,7 @@ export const DARK_L = { soft: 0.235, deep: 0.15 } as const;
 const CHROMA = { 50: 0.12, 100: 0.25, 200: 0.5, 300: 1, 400: 1, 500: 1, 600: 1, 700: 1, 800: 0.8, 900: 0.62, 950: 0.48 } as const;
 
 const lrgb = converter("lrgb");
+const oklch = converter("oklch");
 const rgb = converter("rgb");
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 const round = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -79,6 +82,28 @@ function fit(l: number, c: number, h: number): Oklch {
   l = round(clamp(l, 0, 1));
   h = round(wrap(h));
   return { mode: "oklch", l, c: Math.floor(Math.min(c, maxChroma(l, h) * 0.998) * 1e6) / 1e6, h };
+}
+/** A color as given, to six decimals, with chroma stepped down only if rounding left sRGB. */
+export function exact(color: Oklch): Oklch {
+  let c: Oklch = { mode: "oklch", l: round(color.l), c: Math.floor((color.c ?? 0) * 1e6) / 1e6, h: round(wrap(color.h ?? 0)) };
+  while (!inGamut(c) && c.c > 0) c = { ...c, c: round(c.c - 1e-6) };
+  return c;
+}
+/** Put the brand color on the primary shade nearest its lightness where the ramp stays in order.
+ * Mutates `scale`; returns the shade, or null if no shade can take it. */
+function placeBrand(scale: Record<Shade, Oklch>, brand: Oklch): Shade | null {
+  if (scale[300] === brand) return 300;
+  if (scale[700] === brand) return 700;
+  const GAP = 0.005;
+  const fits = SHADES.filter((shade, i) => {
+    if (shade === 300 || shade === 700) return false;
+    const lighter = i ? scale[SHADES[i - 1]].l : 1, darker = i < SHADES.length - 1 ? scale[SHADES[i + 1]].l : 0;
+    return brand.l < lighter - GAP && brand.l > darker + GAP;
+  });
+  if (!fits.length) return null;
+  const best = fits.reduce((a, b) => Math.abs(scale[b].l - brand.l) < Math.abs(scale[a].l - brand.l) ? b : a);
+  scale[best] = brand;
+  return best;
 }
 /** Yellows turn olive as they darken; drift them toward amber instead. */
 function hueAt(h: number, l: number): number {
@@ -178,30 +203,44 @@ export function generateTheme(values: PaletteValues): Theme {
 
   // Accent roles. Nuxt UI uses one color per role for text, fills, tints, and hover,
   // so each mode gets the lightness nearest the middle that keeps all of those readable.
-  const brandChroma = 0.07 + 0.13 * character;
+  // A brand color sets primary's chroma; secondary stays clear of neutral even for a muted brand.
+  const brand = values.brandColor ? exact(oklch(values.brandColor)!) : undefined;
+  const characterChroma = 0.07 + 0.13 * character;
   const chroma: Record<AccentRole, number> = {
-    primary: brandChroma,
-    secondary: brandChroma * (values.harmony === "complementary" ? 0.6 : 0.7),
+    primary: brand?.c ?? characterChroma,
+    secondary: Math.max(brand?.c ?? 0, characterChroma) * (values.harmony === "complementary" ? 0.6 : 0.7),
     success: 0.14 + 0.06 * character,
     info: 0.14 + 0.06 * character,
     warning: 0.14 + 0.06 * character,
     error: 0.16 + 0.06 * character,
   };
+  const passes = (mode: ColorMode) => (c: Oklch) => {
+    const label = mode === "light" ? canvas : night;
+    return textContrast(c, surfaces[mode]) >= TEXT
+      && fillContrast(c, label, surfaces[mode]) >= TEXT && hoverContrast(c, surfaces[mode]) >= TEXT;
+  };
   const scales = {} as Theme["scales"];
   const roles: Theme["roles"] = { light: {} as Record<AccentRole, Oklch>, dark: {} as Record<AccentRole, Oklch> };
   for (const role of ACCENT_ROLES) {
     const make = ramp(hues[role], chroma[role]);
-    for (const mode of ["light", "dark"] as const) {
-      const label = mode === "light" ? canvas : night;
-      const passes = (c: Oklch) => textContrast(c, surfaces[mode]) >= TEXT
-        && fillContrast(c, label, surfaces[mode]) >= TEXT && hoverContrast(c, surfaces[mode]) >= TEXT;
-      roles[mode][role] = mode === "light" ? search(make, 0.62, 0.15, passes) : search(make, 0.55, 0.9, passes);
+    roles.light[role] = search(make, 0.62, 0.15, passes("light"));
+    roles.dark[role] = search(make, 0.55, 0.9, passes("dark"));
+    // A readable brand color becomes the role color itself, within lightnesses that leave
+    // room for the rest of the ramp.
+    // Otherwise a role color within 0.01 of it steps away, in the direction that only gains
+    // contrast, so the brand color can sit beside it.
+    if (role === "primary" && brand) {
+      if (brand.l >= 0.33 && passes("light")(brand)) roles.light.primary = brand;
+      else if (brand.l <= 0.82 && passes("dark")(brand)) roles.dark.primary = brand;
+      else if (Math.abs(brand.l - roles.light.primary.l) < 0.01) roles.light.primary = make(brand.l - 0.01);
+      else if (Math.abs(brand.l - roles.dark.primary.l) < 0.01) roles.dark.primary = make(brand.l + 0.01);
     }
     const l = rampLightness(roles.dark[role].l, roles.light[role].l);
     scales[role] = Object.fromEntries(SHADES.map(shade => [shade,
       shade === 300 ? roles.dark[role] : shade === 700 ? roles.light[role]
         : fit(l[shade], chroma[role] * CHROMA[shade], hueAt(hues[role], l[shade]))])) as Record<Shade, Oklch>;
   }
+  const brandShade = brand ? placeBrand(scales.primary, brand) : null;
   scales.neutral = Object.fromEntries(SHADES.map(shade => [shade, surface(neutralL[shade])])) as Record<Shade, Oklch>;
 
   const tokens: Tokens = {
@@ -262,7 +301,7 @@ export function generateTheme(values: PaletteValues): Theme {
     modes[mode] = m;
     checks[mode] = list;
   }
-  return { hues, scales, surfaces, roles, tokens, modes, checks };
+  return { hues, scales, surfaces, roles, brandShade, tokens, modes, checks };
 }
 
 /** Swatches of the colors the preview is using in the given mode. */
@@ -299,7 +338,7 @@ export function exportCSS(palette: Palette): string {
    Import after tailwindcss and @nuxt/ui. Toggle .dark for dark mode.
    Fonts load from Google; allow https://fonts.gstatic.com in font-src if you use a CSP.
    Display headings: font-display font-normal leading-display tracking-normal.
-   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · ${v.paper} paper ${v.surfaceTone} · dark depth ${v.darkDepth} */
+   ${fontPairing(v.fontPairing).name} · ${v.harmony} · hue ${v.hue} · character ${v.character} · ${v.paper} paper ${v.surfaceTone} · dark depth ${v.darkDepth}${v.brandColor ? ` · brand ${v.brandColor}` : ""} */
 
 ${fontFaces(v.fontPairing)}
 

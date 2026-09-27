@@ -193,7 +193,7 @@ function download() {
       <aside class="studio-sidebar">
         <div class="eyebrow">Theme settings</div>
         <p class="sidebar-title">Make it yours.</p>
-        <DesignControls v-model="values" />
+        <DesignControls v-model="values" :brand-shade="palette.theme.brandShade" />
         <div class="grid grid-cols-2 gap-2">
           <UButton
             icon="i-lucide-shuffle"
@@ -330,7 +330,7 @@ function download() {
       v-model:open="settings"
       title="Design settings"
       description="Adjust your theme. Changes appear in the preview and save automatically."
-      ><template #body><DesignControls v-model="values" /></template>
+      ><template #body><DesignControls v-model="values" :brand-shade="palette.theme.brandShade" /></template>
     </UModal>
     <UModal
       :ui="{ header: 'pr-14' }"
@@ -365,7 +365,7 @@ function download() {
                   :key="c.label"
                   :style="{ background: format(c.color) }" /></span
               ><span class="truncate capitalize">{{
-                `${fontPairing(entry.values.fontPairing).name} · ${entry.values.harmony} · ${entry.values.hue}°`
+                `${fontPairing(entry.values.fontPairing).name} · ${entry.values.harmony} · ${entry.values.brandColor || `${entry.values.hue}°`}`
               }}</span></UButton
             ><UButton
               icon="i-lucide-trash-2"

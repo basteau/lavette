@@ -6,7 +6,13 @@ settings range.
 
 ## Controls
 
-- **Hue** is primary's hue, used exactly.
+- **Brand color** (optional) takes any CSS color, fitted to sRGB and stored as
+  hex. It sets primary's hue and chroma, and lands exactly on the primary shade
+  nearest its lightness that keeps the ramp in order. If it passes every role
+  check it becomes the role color itself (700, or 300 for dark mode). A role
+  color within 0.01 of it steps aside, darker or lighter, to make room. Near-grey
+  colors (chroma below 0.03) are rejected: Surface tone sets the greys.
+- **Hue** is primary's hue, used exactly. A brand color sets it.
 - **Color relationship** puts secondary beside the hue (**Analogous**, ±40°) or
   opposite it (**Complementary**, 180° ±20°), whichever offset is farthest from
   the status hues.

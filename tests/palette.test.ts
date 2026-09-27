@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { exportCSS, format, generatePalette, normalize, randomValues } from "../src/palette";
+import { exportCSS, format, generatePalette, normalize, parseBrandColor, randomValues } from "../src/palette";
 
 describe("palette settings", () => {
   it("normalizes unknown and out-of-range persisted values", () => {
@@ -16,6 +16,7 @@ describe("palette settings", () => {
       surfaceTone: 25,
       paper: "warm",
       darkDepth: 65,
+      brandColor: "",
       radius: 0.125,
       focusOffset: 0,
       fontPairing: "studio",
@@ -41,6 +42,29 @@ describe("palette settings", () => {
     assert.equal(warmth.paper, "warm");
     assert.ok(!("paperWarmth" in warmth));
     assert.equal(normalize({ hue: 359.9999 }).hue, 0);
+  });
+
+  it("reads brand colors in any CSS notation as sRGB hex, and rejects greys", () => {
+    assert.deepEqual(parseBrandColor("#1F4FD8"), { hex: "#1f4fd8" });
+    assert.deepEqual(parseBrandColor(" 1f4fd8 "), { hex: "#1f4fd8" }, "the # is optional");
+    assert.deepEqual(parseBrandColor("rgb(31 79 216)"), { hex: "#1f4fd8" });
+    assert.match((parseBrandColor("oklch(0.8 0.4 150)") as { hex: string }).hex, /^#[0-9a-f]{6}$/, "wide-gamut input is fitted to sRGB");
+    assert.deepEqual(parseBrandColor(""), { hex: "" }, "empty clears");
+    assert.ok("error" in parseBrandColor("brandish"));
+    assert.ok("error" in parseBrandColor("#808080"), "greys belong to the neutral scale");
+    assert.ok("error" in parseBrandColor("#000"));
+  });
+
+  it("takes primary's hue from the brand color", () => {
+    const values = normalize({ brandColor: "#1F4FD8", hue: 10 });
+    assert.equal(values.brandColor, "#1f4fd8");
+    assert.ok(Math.abs(values.hue - 264.52) < 0.01, `hue ${values.hue}`);
+    assert.match(String(values.hue), /^\d+(\.\d{1,3})?$/, "hue keeps at most three decimals");
+    assert.equal(normalize({ hue: 545.2 }).hue, 185.2, "wrapping leaves no float noise");
+    assert.deepEqual(normalize(values), values);
+    assert.equal(normalize({ brandColor: "#808080", hue: 10 }).brandColor, "", "an invalid brand color is dropped");
+    assert.equal(normalize({ brandColor: "#808080", hue: 10 }).hue, 10);
+    assert.equal(randomValues(values).brandColor, "", "shuffling picks a new color direction");
   });
 
   it("shuffles colors while keeping type, radius, focus, and dark depth settings", () => {

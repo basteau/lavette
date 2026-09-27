@@ -121,6 +121,14 @@ p {
   display: grid;
   gap: 14px;
 }
+/* An empty swatch keeps its outline so the field reads as a color input. */
+.brand-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: calc(var(--ui-radius) * 0.5);
+  box-shadow: inset 0 0 0 1px var(--ui-border-accented);
+}
 .section-nav {
   display: grid;
   gap: 3px;

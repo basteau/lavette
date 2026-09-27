@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { converter, differenceCiede2000, wcagContrast, type Oklch } from "culori";
+import { converter, differenceCiede2000, formatHex, wcagContrast, type Oklch } from "culori";
 import { describe, it } from "node:test";
 import { generatePalette, exportCSS, inGamut, type Harmony, type Paper } from "../src/palette";
 import { ACCENT_ROLES, DARK_L, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
@@ -107,6 +107,36 @@ describe("theme generation", () => {
       const legacy = generatePalette({ character }).theme.surfaces.dark[0].l;
       assert.ok(Math.abs(legacy - (0.215 - 0.035 * character / 100)) <= 0.001, `character ${character}: ${legacy}`);
     }
+  });
+
+  it("puts a brand color exactly on the primary ramp without breaking it", () => {
+    const brands = ["#1f4fd8", "#ff0000", "#ffff00", "#00ff00", "#1e3a8a", "#0b1a40", "#fde68a", "#bae6fd", "#7c3aed", "#312e81", "#93c5fd", "#0d9488", "#f97316", "#4414e5", "#8dc336", "#4c372a"];
+    for (const brandColor of brands) for (const harmony of HARMONIES) for (const character of [0, 100]) for (const darkDepth of [0, 100]) for (const paper of PAPERS) {
+      const palette = generatePalette({ brandColor, harmony, character, darkDepth, paper, surfaceTone: 100 });
+      const { theme } = palette;
+      const at = `${brandColor} ${harmony} character=${character} depth=${darkDepth} ${paper}`;
+      assert.equal(palette.values.brandColor, brandColor, `${at}: brand color was rejected`);
+      assert.ok(theme.brandShade !== null, `${at}: no shade took the brand color`);
+      const exported = cssColors(exportCSS(palette), "light")(`--ui-color-primary-${theme.brandShade}`);
+      assert.equal(formatHex(exported), brandColor, `${at}: primary-${theme.brandShade} is not the brand color`);
+      assert.ok(hueDistance(theme.hues.primary, parse(brandColor)!.h!) < 0.01);
+      let lastL = 1;
+      for (const shade of SHADES) {
+        const color = theme.scales.primary[shade];
+        assert.ok(inGamut(color), `${at}: primary-${shade} out of gamut`);
+        assert.ok(color.l < lastL, `${at}: primary-${shade} is not darker than the previous shade`);
+        lastL = color.l;
+      }
+      for (const mode of ["light", "dark"] as const) for (const check of theme.checks[mode]) {
+        assert.ok(check.ratio >= check.target, `${at}: ${mode} ${check.label} ${check.ratio} < ${check.target}`);
+      }
+      assert.ok(deltaE(theme.scales.secondary[500], theme.scales.neutral[500]) >= 6, `${at}: secondary looks neutral`);
+    }
+    // A readable brand color is the button color itself; one that misses by a hair sits beside it.
+    assert.equal(generatePalette({ brandColor: "#312e81" }).theme.brandShade, 700);
+    assert.equal(generatePalette({ brandColor: "#93c5fd" }).theme.brandShade, 300);
+    assert.equal(generatePalette({ brandColor: "#1e3a8a" }).theme.brandShade, 600);
+    assert.equal(generatePalette({}).theme.brandShade, null);
   });
 
   it("drifts yellow ramps toward amber instead of olive", () => {
