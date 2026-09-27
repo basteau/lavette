@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FONT_PAIRINGS, fontFacesForPairing, fontSizeAdjust, allFontFaces, loadFontPairing } from "../src/fonts";
 import googleFonts from "../src/google-fonts.json" with { type: "json" };
-import { exportCSS, generatePalette, normalize } from "../src/palette";
+import { generatePalette, normalize } from "../src/palette";
+import { exportCSS } from "../src/theme";
 
 describe("font pairing export", () => {
   it("migrates legacy/invalid settings and preserves saved selections", () => {

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { exportCSS, generatePalette } from "../../../src/palette";
+import { generatePalette } from "../../../src/palette";
+import { exportCSS } from "../../../src/theme";
 import { presets } from "./presets";
 
 writeFileSync(new URL("./lavette-theme.css", import.meta.url), exportCSS(generatePalette(presets.default)));

@@ -4,11 +4,9 @@ import {
   generatePalette,
   randomValues,
   normalize,
-  exportCSS,
-  format,
   type PaletteValues,
 } from "./palette";
-import { themeStyles, fontStyles, corePaletteColors, focusStyles } from "./theme";
+import { themeStyles, fontStyles, corePaletteColors, focusStyles, exportCSS, format } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
 import DesignControls from "./DesignControls.vue";
 import ThemeArt from "./ThemeArt.vue";

@@ -1,7 +1,6 @@
 import { clampChroma, converter, formatHex, parse } from "culori";
 import { DEFAULT_FONT_PAIRING, fontPairing } from "./fonts";
-import { DARK_L, SURFACE_TINTS, generateTheme, type Theme } from "./theme";
-export { exportCSS, format, inGamut } from "./theme";
+import { DARK_L, SURFACE_TINTS, clamp, generateTheme, wrap, type Theme } from "./theme";
 
 export type Harmony = "analogous" | "complementary";
 export type SurfaceTint = "primary" | "warm" | "cool";
@@ -23,8 +22,6 @@ export interface Palette {
   theme: Theme;
 }
 
-const clamp = (n: number, min: number, max: number): number =>
-  Math.max(min, Math.min(max, n));
 const finite = (value: unknown, fallback: number): number => {
   if (value === null || value === "") return fallback;
   try {
@@ -34,7 +31,6 @@ const finite = (value: unknown, fallback: number): number => {
     return fallback;
   }
 };
-const wrap = (h: number): number => ((h % 360) + 360) % 360;
 const oklch = converter("oklch");
 
 /** Below this chroma a color reads as grey; greys come from the neutral scale instead. */

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useHashTarget } from "./hash";
 import { computed } from "vue";
-import { exportCSS, type Palette } from "./palette";
-import { THEME_ROLES } from "./theme";
+import type { Palette } from "./palette";
+import { THEME_ROLES, exportCSS } from "./theme";
 import { fontPairing } from "./fonts";
 useHashTarget();
 const props = defineProps<{ palette: Palette }>();

@@ -55,9 +55,9 @@ const CHROMA = { 50: 0.12, 100: 0.25, 200: 0.5, 300: 1, 400: 1, 500: 1, 600: 1, 
 const lrgb = converter("lrgb");
 const oklch = converter("oklch");
 const rgb = converter("rgb");
-const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 const round = (n: number) => Math.round(n * 1e6) / 1e6;
-const wrap = (h: number) => ((h % 360) + 360) % 360;
+export const wrap = (h: number) => ((h % 360) + 360) % 360;
 export const hueDistance = (a: number, b: number) => {
   const d = wrap(a - b);
   return Math.min(d, 360 - d);

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { exportCSS, format, generatePalette, normalize, parseBrandColor, randomValues } from "../src/palette";
+import { generatePalette, normalize, parseBrandColor, randomValues } from "../src/palette";
+import { exportCSS, format } from "../src/theme";
 
 const pick = ({ surfaceTint, tintStrength }: ReturnType<typeof normalize>) => ({ surfaceTint, tintStrength });
 

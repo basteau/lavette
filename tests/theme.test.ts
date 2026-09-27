@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { converter, differenceCiede2000, formatHex, wcagContrast, type Oklch } from "culori";
 import { describe, it } from "node:test";
-import { generatePalette, exportCSS, inGamut, type Harmony, type SurfaceTint } from "../src/palette";
-import { ACCENT_ROLES, DARK_L, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
+import { generatePalette, type Harmony, type SurfaceTint } from "../src/palette";
+import { ACCENT_ROLES, exportCSS, inGamut, DARK_L, THEME_ROLES, SHADES, STATUS, corePaletteColors, composite, hueDistance, type StatusRole } from "../src/theme";
 
 const parse = converter("oklch");
 const deltaE = differenceCiede2000();

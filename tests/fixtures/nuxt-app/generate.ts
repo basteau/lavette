@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { generatePalette, exportCSS } from '../../../src/palette';
+import { generatePalette } from '../../../src/palette';
+import { exportCSS } from '../../../src/theme';
 
 const destination = new URL('app/assets/css/lavette-theme.css', import.meta.url);
 await mkdir(new URL('.', destination), { recursive: true });
