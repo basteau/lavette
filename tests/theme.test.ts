@@ -116,7 +116,9 @@ describe("theme generation", () => {
   });
 
   it("puts a brand color exactly on the primary ramp without breaking it", () => {
-    const brands = ["#1f4fd8", "#ff0000", "#ffff00", "#00ff00", "#1e3a8a", "#0b1a40", "#fde68a", "#bae6fd", "#7c3aed", "#312e81", "#93c5fd", "#0d9488", "#f97316", "#4414e5", "#8dc336", "#4c372a"];
+    const brands = ["#1f4fd8", "#ff0000", "#ffff00", "#00ff00", "#1e3a8a", "#0b1a40", "#fde68a", "#bae6fd", "#7c3aed", "#312e81", "#93c5fd", "#0d9488", "#f97316", "#4414e5", "#8dc336", "#4c372a",
+      // Saturated blues sit where the sRGB gamut has gaps in chroma at dark shades.
+      "#0033ff", "#0011eb", "#0104d4"];
     for (const brandColor of brands) for (const harmony of HARMONIES) for (const vividness of [0, 100]) for (const darkDepth of [0, 100]) for (const surface of SURFACES) {
       const palette = generatePalette({ brandColor, harmony, vividness, darkDepth, ...surface });
       const { theme } = palette;

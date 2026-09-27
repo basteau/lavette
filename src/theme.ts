@@ -68,8 +68,10 @@ export function inGamut(color: Oklch): boolean {
   const v = lrgb(color);
   return [v.r, v.g, v.b].every(n => Number.isFinite(n) && n >= -1e-7 && n <= 1 + 1e-7);
 }
-function maxChroma(l: number, h: number): number {
-  let lo = 0, hi = 0.4;
+/** The highest in-gamut chroma found by bisecting below `hi`. Near sRGB blue the gamut is not
+ * monotonic in chroma, so the result is only guaranteed in gamut, not the true maximum. */
+function maxChroma(l: number, h: number, hi = 0.4): number {
+  let lo = 0;
   for (let i = 0; i < 24; i++) {
     const c = (lo + hi) / 2;
     if (inGamut({ mode: "oklch", l, c, h })) lo = c;
@@ -81,7 +83,10 @@ function maxChroma(l: number, h: number): number {
 function fit(l: number, c: number, h: number): Oklch {
   l = round(clamp(l, 0, 1));
   h = round(wrap(h));
-  return { mode: "oklch", l, c: Math.floor(Math.min(c, maxChroma(l, h) * 0.998) * 1e6) / 1e6, h };
+  const at = (c: number): Oklch => ({ mode: "oklch", l, c: Math.floor(c * 1e6) / 1e6, h });
+  const color = at(Math.min(c, maxChroma(l, h) * 0.998));
+  // A chroma below that bound can still fall in an out-of-gamut gap; search below it instead.
+  return inGamut(color) ? color : at(maxChroma(l, h, color.c) * 0.998);
 }
 /** A color as given, to six decimals, with chroma stepped down only if rounding left sRGB. */
 export function exact(color: Oklch): Oklch {
