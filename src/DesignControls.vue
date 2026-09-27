@@ -14,7 +14,8 @@ const pairing = computed(() => fontPairing(values.value.fontPairing));
 // The field keeps what the person typed until it parses; the theme only sees valid colors.
 const brandDraft = ref(values.value.brandColor);
 const brandError = ref('');
-watch(() => values.value.brandColor, hex => { brandDraft.value = hex; brandError.value = ''; });
+// Any settings change (a commit, Shuffle, a saved theme) replaces the model, so reset from it.
+watch(values, value => { brandDraft.value = value.brandColor; brandError.value = ''; });
 function commitBrand() {
   const result = parseBrandColor(brandDraft.value);
   if ('error' in result) return void (brandError.value = result.error);
@@ -35,7 +36,10 @@ function pickBrand(hex: string | undefined) {
   if (!hex) return;
   pickerColor.value = hex;
   if (!picking.value) return;
-  brandDraft.value = hex;
+  // A rejected pick (near grey) shows why, but leaves the field on the current brand color.
+  const result = parseBrandColor(hex);
+  if ('error' in result) return void (brandError.value = result.error);
+  brandDraft.value = result.hex;
   commitBrand();
 }
 const brandHelp = computed(() => {
@@ -54,10 +58,11 @@ const brandHelp = computed(() => {
       <div class="control-group-body">
         <ControlSlider label="Primary hue" :value="values.brandColor ? 'Set by brand color' : `${Math.round(values.hue)}°`" :model-value="values.hue" @update:model-value="update('hue', $event)" :max="359" :step="1" :disabled="!!values.brandColor" />
         <UFormField label="Brand color" :description="brandHelp" :error="brandError || undefined">
-          <UInput v-model="brandDraft" placeholder="Pick or paste a color" spellcheck="false" autocomplete="off" class="w-full font-mono" :ui="{ leading: 'ps-1', trailing: 'pe-1' }" @change="commitBrand" @keydown.enter="commitBrand">
+          <UInput v-model="brandDraft" placeholder="Pick or paste a color" spellcheck="false" autocomplete="off" class="w-full font-mono" :ui="{ leading: 'ps-1', trailing: 'pe-1' }" @update:model-value="brandError = ''" @change="commitBrand" @keydown.enter="commitBrand">
             <template #leading>
               <UPopover @update:open="openPicker">
-                <UButton color="neutral" variant="ghost" size="sm" square aria-label="Pick brand color">
+                <!-- UColorPicker is pointer-only, so keyboard users type into the field instead. -->
+                <UButton color="neutral" variant="ghost" size="sm" square tabindex="-1" aria-label="Open color picker">
                   <span class="brand-swatch" :style="{ background: values.brandColor || 'transparent' }" />
                 </UButton>
                 <template #content>

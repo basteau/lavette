@@ -14,10 +14,12 @@ Each control sets one thing, and each thing has one control.
 - **Brand color** (optional) replaces Primary hue. It takes any CSS color,
   typed or picked, fitted to sRGB and stored as hex, and sets primary's hue and
   chroma. It lands exactly on the primary shade nearest its lightness that
-  keeps the ramp in order. If it passes every role check it becomes the role
-  color itself (700, or 300 for dark mode). A role color within 0.01 of it
+  keeps the ramp in order. If it passes every role check and leaves room for
+  the rest of the ramp (L 0.33 or above for 700, L 0.82 or below for 300), it
+  becomes the role color itself. A role color within 0.01 of it
   steps aside, darker or lighter, to make room. Near-grey colors (chroma below
-  0.03) are rejected: Surface tint sets the greys.
+  0.03) and translucent colors are rejected: Surface tint sets the greys. The
+  picker is pointer-only; the text field is the keyboard path.
 - **Secondary color** sits beside primary (±40°) or opposite it (180° ±20°),
   whichever offset is farthest from the status hues. Its chroma follows
   primary's.
@@ -44,7 +46,8 @@ and clears any brand color. The other settings stay.
 
 Saved themes from earlier versions migrate without changing how they look:
 Color character becomes Vividness, Paper warmth becomes a surface tint and
-strength, and the dark background keeps the depth character gave it.
+strength, and the dark background keeps the depth character gave it (within
+L 0.001).
 
 ## Output
 

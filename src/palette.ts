@@ -45,6 +45,7 @@ export function parseBrandColor(input: unknown): { hex: string } | { error: stri
   if (!text) return { hex: "" };
   const color = parse(text) ?? parse(`#${text}`);
   if (!color) return { error: "Enter a color like #1f4fd8, rgb(31 79 216), or oklch(0.5 0.2 265)." };
+  if ((color.alpha ?? 1) < 1) return { error: "Use an opaque color; brand colors can't be transparent." };
   const hex = formatHex(clampChroma(color, "oklch"));
   if ((oklch(hex)?.c ?? 0) < MIN_BRAND_CHROMA) return { error: "This color is nearly grey. Surface tint sets the greys; choose a more colorful brand color." };
   return { hex };

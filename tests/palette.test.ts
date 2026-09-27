@@ -63,6 +63,9 @@ describe("palette settings", () => {
     assert.ok("error" in parseBrandColor("brandish"));
     assert.ok("error" in parseBrandColor("#808080"), "greys belong to the neutral scale");
     assert.ok("error" in parseBrandColor("#000"));
+    for (const translucent of ["#ff00", "rgb(255 0 0 / 0.5)", "transparent"]) {
+      assert.match((parseBrandColor(translucent) as { error: string }).error, /opaque/, translucent);
+    }
   });
 
   it("takes primary's hue from the brand color", () => {
