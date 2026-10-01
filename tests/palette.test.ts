@@ -23,6 +23,7 @@ describe("palette settings", () => {
       radius: 0.125,
       focusOffset: 0,
       fontPairing: "studio",
+      iconSet: "lucide",
     });
     assert.equal(normalize({ radius: 100 }).radius, 0.5);
     assert.equal(normalize({ radius: -1 }).radius, 0);

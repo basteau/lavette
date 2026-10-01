@@ -1,3 +1,4 @@
+import { normalizeIconSet, type IconSet } from "./icons";
 import { clampChroma, converter, formatHex, parse } from "culori";
 import { DEFAULT_FONT_PAIRING, fontPairing } from "./fonts";
 import { DARK_L, SURFACE_TINTS, clamp, generateTheme, wrap, type Theme } from "./theme";
@@ -16,6 +17,7 @@ export interface PaletteValues {
   radius: number;
   focusOffset: number;
   fontPairing: string;
+  iconSet: IconSet;
 }
 export interface Palette {
   values: PaletteValues;
@@ -86,6 +88,7 @@ export function normalize(input: unknown = {}): PaletteValues {
     radius: Math.round(clamp(finite(values.radius, 0.125), 0, 0.5) * 1000) / 1000,
     focusOffset: Math.round(clamp(finite(values.focusOffset, 0), 0, 4)),
     fontPairing: fontPairing(values.fontPairing).id,
+    iconSet: normalizeIconSet(values.iconSet),
   };
 }
 

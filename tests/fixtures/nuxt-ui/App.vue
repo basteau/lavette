@@ -1,4 +1,5 @@
 <script setup>
+import { uiTheme } from './lavette-ui.config';
 import { ref, watch, onUnmounted } from 'vue';
 import { presets } from './presets';
 import { useToast } from '@nuxt/ui/composables/useToast';
@@ -37,6 +38,11 @@ function submit() {
     <UContainer class="py-8 space-y-6">
       <h1 class="text-3xl font-display font-normal leading-display">Exported theme compatibility</h1>
       <p class="text-muted">Real Nuxt UI components. Exact preset: {{ JSON.stringify(presets[theme]) }}.</p>
+      <section aria-label="Exported icons" class="grid grid-cols-4 gap-4 sm:grid-cols-8">
+        <div v-for="(icon, role) in uiTheme.icons" :key="role" class="flex flex-col items-center gap-2">
+          <UIcon :name="icon" class="size-6" /><span class="text-xs">{{ role }}</span>
+        </div>
+      </section>
       <section v-for="role in roles" :key="role" :aria-label="role + ' examples'" class="border border-muted rounded-lg p-5 space-y-4" :style="{background:`var(--ui-${surface})`}">
         <h2 class="font-medium capitalize">{{role}}</h2>
         <div class="flex gap-3 flex-wrap">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiTheme } from '../lavette-ui.config';
 const mode = useColorMode();
 const open = ref(false);
 </script>
@@ -10,6 +11,11 @@ const open = ref(false);
         <UButton color="neutral" variant="outline" @click="mode.preference = mode.value === 'dark' ? 'light' : 'dark'">Switch color mode</UButton>
       </div>
       <p class="text-muted">This Nuxt app uses the exported CSS and Google-hosted fonts with Nuxt UI’s default control sizes.</p>
+      <section aria-label="Exported icons" class="grid grid-cols-4 gap-4 sm:grid-cols-8">
+        <div v-for="(icon, role) in uiTheme.icons" :key="role" class="flex flex-col items-center gap-2">
+          <UIcon :name="icon" class="size-6" /><span class="text-xs">{{ role }}</span>
+        </div>
+      </section>
       <UCard>
         <div class="space-y-6">
           <h2 class="text-2xl font-display font-normal leading-display">Your next chapter</h2>

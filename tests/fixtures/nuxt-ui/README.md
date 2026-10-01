@@ -53,3 +53,11 @@ Reload the browser before repeating the checks.
 For token definitions and contrast targets, see the
 [theme reference](../../../docs/theme-reference.md). For the studio's setup and
 unit tests, see the [project README](../../../README.md).
+
+## Icon presets
+
+Set `ICON_SET=lucide`, `ICON_SET=tabler`, or `ICON_SET=heroicons` before the build
+command. The generated configuration is the same file offered by the studio.
+The fixture renders all 43 built-in roles with remote icon requests disabled.
+Verify every icon in the grid, plus select arrows, checked controls, loading
+indicators, and dialog close buttons. Google-hosted fonts may still load.

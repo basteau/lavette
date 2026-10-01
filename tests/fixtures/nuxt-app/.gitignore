@@ -1,1 +1,4 @@
 app/assets/css/lavette-theme.css
+
+lavette-ui.config.ts
+app/app.config.ts
