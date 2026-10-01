@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconSetup from "./IconSetup.vue";
 import { useHashTarget } from "./hash";
 import { computed } from "vue";
 import type { Palette } from "./palette";
@@ -6,7 +7,7 @@ import { THEME_ROLES, exportCSS } from "./theme";
 import { fontPairing } from "./fonts";
 useHashTarget();
 const props = defineProps<{ palette: Palette }>();
-const emit = defineEmits<{ copy: [text: string]; download: [] }>();
+const emit = defineEmits<{ copy: [text: string]; download: []; "download-icons": [] }>();
 const pair = computed(() => fontPairing(props.palette.values.fontPairing));
 const size = computed(() => (new Blob([exportCSS(props.palette)]).size / 1024).toFixed(1));
 const stylesheet = `@import "tailwindcss";
@@ -69,6 +70,13 @@ const heading = `<h1 class="font-display font-normal leading-display tracking-no
               </figcaption>
               <pre>{{ heading }}</pre>
             </figure>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">5</span>
+          <div>
+            <h3>Apply your icon library</h3>
+            <IconSetup :icon-set="palette.values.iconSet" @copy="emit('copy', $event)" @download="emit('download-icons')" />
           </div>
         </li>
       </ol>

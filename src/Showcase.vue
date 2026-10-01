@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { useHashTarget } from "./hash";
+import { iconPresets, ICON_SAMPLES, ICON_SETS } from "./icons";
 import SemanticOverview from "./SemanticOverview.vue";
 import ServiceScenario from "./ServiceScenario.vue";
 import PairingShowcase from "./PairingShowcase.vue";
@@ -11,6 +12,7 @@ import { THEME_ROLES, SHADES, corePaletteColors, format } from "./theme";
 import { fontPairing } from "./fonts";
 useHashTarget();
 const props = defineProps<{ palette: Palette; dark: boolean }>();
+const icons = computed(() => iconPresets[props.palette.values.iconSet].icons);
 const emit = defineEmits<{ copy: [text: string]; export: [] }>();
 const pair = computed(() => fontPairing(props.palette.values.fontPairing));
 const core = computed(() => corePaletteColors(props.palette, props.dark ? "dark" : "light"));
@@ -56,7 +58,7 @@ watch(form, () => { submitted.value = false; });
 function submit() {
   submitted.value = true;
   formMessage.value = "Profile saved. Your example changes are ready.";
-  toast.add({ id: "profile-saved", color: "success", title: "Profile saved", icon: "i-lucide-circle-check", duration: 8000 });
+  toast.add({ closeIcon: icons.value.close, id: "profile-saved", color: "success", title: "Profile saved", icon: icons.value.success, duration: 8000 });
 }
 const activity = ref("");
 const rows = [
@@ -182,7 +184,7 @@ const passes = computed(() =>
           :style="{ background: format(c.color) }"
         /><span class="flex justify-between gap-2"
           ><strong>{{ c.label }}</strong
-          ><UIcon name="i-lucide-copy" class="size-3.5" /></span
+          ><UIcon :name="icons.copy" class="size-3.5" /></span
         ><code>{{ c.token }}</code>
       </button>
     </div>
@@ -205,7 +207,7 @@ const passes = computed(() =>
         </div>
       </div>
     </div>
-    <SemanticOverview />
+    <SemanticOverview :icon-set="palette.values.iconSet" />
   </section>
   <section id="typography" class="specimen-section">
     <div class="section-heading">
@@ -265,6 +267,15 @@ const passes = computed(() =>
         <p>Nothing here is a mockup. Press a button to see the code that renders it.</p>
       </div>
     </div>
+    <UCard class="mb-6" :ui="{ body: 'sm:p-7' }">
+      <div class="specimen-label"><h3>Icons</h3><span class="text-sm text-muted">{{ ICON_SETS.find(set => set.value === palette.values.iconSet)?.label }}</span></div>
+      <div class="grid grid-cols-4 gap-x-2 gap-y-6 sm:grid-cols-6 lg:grid-cols-12">
+        <div v-for="role in ICON_SAMPLES" :key="role" class="flex flex-col items-center gap-3">
+          <UIcon :name="icons[role]" class="size-6 text-default" />
+          <span class="text-xs text-muted capitalize">{{ role }}</span>
+        </div>
+      </div>
+    </UCard>
     <UCard class="mb-6" :ui="{ body: 'sm:p-7' }"
       ><div class="specimen-label">
         <h3>Actions</h3>
@@ -301,7 +312,7 @@ const passes = computed(() =>
         ><UButton disabled>Disabled</UButton><UButton loading>Loading</UButton
         ><UTooltip text="Tooltip"
           ><UButton
-            icon="i-lucide-info"
+            :icon="icons.info"
             color="neutral"
             variant="outline"
             aria-label="Show tooltip" /></UTooltip
@@ -309,19 +320,19 @@ const passes = computed(() =>
           :items="[
             {
               label: 'Duplicate specimen',
-              icon: 'i-lucide-copy',
+              icon: icons.copy,
               onSelect: () => (activity = 'Specimen duplicated in this demo.'),
             },
             {
               label: 'Export theme',
-              icon: 'i-lucide-download',
+              icon: icons.download,
               onSelect: () => emit('export'),
             },
           ]"
           ><UButton
             color="neutral"
             variant="outline"
-            trailing-icon="i-lucide-chevron-down"
+            :trailing-icon="icons.chevronDown"
             >More actions</UButton
           ></UDropdownMenu
         >
@@ -331,7 +342,7 @@ const passes = computed(() =>
         ><span v-else class="text-muted">Press a button above to see its code.</span
         ><UButton
           v-if="snippet"
-          icon="i-lucide-copy"
+          :icon="icons.copy"
           size="xs"
           color="neutral"
           variant="ghost"
@@ -365,7 +376,7 @@ const passes = computed(() =>
               ><UFormField label="Full name" name="name" required
                 ><UInput
                   v-model="form.name"
-                  icon="i-lucide-user"
+                  :icon="icons.user"
                   class="w-full" /></UFormField
               ><UFormField
                 label="Email address"
@@ -374,7 +385,7 @@ const passes = computed(() =>
                 ><UInput
                   v-model="form.email"
                   placeholder="alex@studio.design"
-                  icon="i-lucide-mail"
+                  :icon="icons.mail"
                   class="w-full" /></UFormField
               ><UFormField label="Your role" name="role"
                 ><USelect
@@ -388,7 +399,7 @@ const passes = computed(() =>
                 <UCheckbox
                   v-model="check"
                   label="Keep me in the loop"
-                /><UButton type="submit" trailing-icon="i-lucide-arrow-right"
+                /><UButton type="submit" :trailing-icon="icons.arrowRight"
                   >Save profile</UButton
                 >
               </div>
@@ -397,7 +408,7 @@ const passes = computed(() =>
                 color="success"
                 variant="soft"
                 :title="formMessage"
-                icon="i-lucide-circle-check" /></UForm></template
+                :icon="icons.success" /></UForm></template
           ><template #preferences
             ><div class="space-y-7 py-5">
               <USwitch
@@ -439,25 +450,25 @@ const passes = computed(() =>
             <UAlert
               color="success"
               :variant="feedbackVariant"
-              icon="i-lucide-circle-check"
+              :icon="icons.success"
               title="Everything is in sync"
               description="Your latest changes are saved."
             /><UAlert
               color="info"
               :variant="feedbackVariant"
-              icon="i-lucide-info"
+              :icon="icons.info"
               title="New version available"
               description="Refresh to get the latest features."
             /><UAlert
               color="warning"
               :variant="feedbackVariant"
-              icon="i-lucide-triangle-alert"
+              :icon="icons.warning"
               title="Trial ending soon"
               description="Your trial ends in three days."
             /><UAlert
               color="error"
               :variant="feedbackVariant"
-              icon="i-lucide-circle-alert"
+              :icon="icons.caution"
               title="That didn’t go through"
               description="Check your connection and try again."
             />
@@ -510,7 +521,7 @@ const passes = computed(() =>
             ><UButton
               color="neutral"
               variant="outline"
-              trailing-icon="i-lucide-chevron-down"
+              :trailing-icon="icons.chevronDown"
               >Quick note</UButton
             ><template #content
               ><div class="p-4 max-w-64">
@@ -525,7 +536,7 @@ const passes = computed(() =>
       >
     </div>
   </section>
-  <PairingShowcase />
+  <PairingShowcase :icon-set="palette.values.iconSet" />
   <section id="patterns" class="specimen-section">
     <div class="section-heading">
       <div>
@@ -538,7 +549,7 @@ const passes = computed(() =>
       ><div class="workspace-header">
         <div class="flex items-center gap-3">
           <span class="workspace-icon"
-            ><UIcon name="i-lucide-command" class="size-5"
+            ><UIcon :name="icons.command" class="size-5"
           /></span>
           <h3 class="font-semibold">Studio workspace</h3>
         </div>
@@ -574,7 +585,7 @@ const passes = computed(() =>
         </h4>
         <UInput
           v-model="search"
-          icon="i-lucide-search"
+          :icon="icons.search"
           placeholder="Search projects…"
           aria-label="Search projects"
           @update:model-value="page = 1"
@@ -620,7 +631,7 @@ const passes = computed(() =>
           size="xs"
         /></div
     ></UCard>
-    <ServiceScenario />
+    <ServiceScenario :icon-set="palette.values.iconSet" />
     <div class="two-column mt-6">
       <UCard class="membership"
         ><UBadge variant="subtle">THE STUDIO PLAN</UBadge>
@@ -636,14 +647,14 @@ const passes = computed(() =>
             :key="benefit"
             class="flex gap-2 text-sm"
           >
-            <UIcon name="i-lucide-check" class="size-4 text-primary" />{{
+            <UIcon :name="icons.check" class="size-4 text-primary" />{{
               benefit
             }}
           </li>
         </ul>
         <UButton
           block
-          trailing-icon="i-lucide-arrow-up-right"
+          :trailing-icon="icons.external"
           @click="modal = true"
           >Preview plan dialog</UButton
         ></UCard
@@ -657,7 +668,7 @@ const passes = computed(() =>
             color="neutral"
             variant="link"
             class="px-0"
-            trailing-icon="i-lucide-arrow-right"
+            :trailing-icon="icons.arrowRight"
             @click="drawer = true"
             >Read the field note</UButton
           >
@@ -763,7 +774,7 @@ const passes = computed(() =>
             >{{ checkedPairs.length }} checks in this mode</span
           ><UButton
             variant="link"
-            trailing-icon="i-lucide-download"
+            :trailing-icon="icons.download"
             @click="emit('export')"
             >Export tokens</UButton
           >
@@ -779,7 +790,7 @@ const passes = computed(() =>
         <UAlert
           color="primary"
           variant="soft"
-          icon="i-lucide-sparkles"
+          :icon="icons.sparkles"
           title="14 days free"
           description="Cancel any time before your trial ends."
         />

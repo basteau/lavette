@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { iconPresets, type IconSet } from "./icons";
+import { computed, ref } from "vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
+const props = defineProps<{ iconSet: IconSet }>();
+const icons = computed(() => iconPresets[props.iconSet].icons);
 const toast = useToast();
 const surface = ref("bg");
 const surfaces = [
@@ -9,14 +12,14 @@ const surfaces = [
   { label: "Elevated", value: "bg-elevated" },
   { label: "Accented", value: "bg-accented" },
 ];
-const statuses = [
-  { role: "success", label: "Success", status: "Saved", icon: "i-lucide-circle-check", title: "Changes saved", description: "Your team can see the latest version.", action: "View changes" },
-  { role: "info", label: "Information", status: "Scheduled", icon: "i-lucide-info", title: "Update scheduled", description: "The next version goes live tomorrow.", action: "View schedule" },
-  { role: "warning", label: "Warning", status: "Needs review", icon: "i-lucide-triangle-alert", title: "Review needed", description: "Two items need attention before release.", action: "Review items" },
-  { role: "error", label: "Error", status: "Failed", icon: "i-lucide-circle-x", title: "Upload failed", description: "Your file is safe. Try uploading it again.", action: "View issue" },
-] as const;
-function preview(status: typeof statuses[number]) {
-  toast.add({ id: "semantic-preview", color: status.role, icon: status.icon, title: status.title, description: status.description, duration: 8000 });
+const statuses = computed(() => [
+  { role: "success", label: "Success", status: "Saved", icon: icons.value.success, title: "Changes saved", description: "Your team can see the latest version.", action: "View changes" },
+  { role: "info", label: "Information", status: "Scheduled", icon: icons.value.info, title: "Update scheduled", description: "The next version goes live tomorrow.", action: "View schedule" },
+  { role: "warning", label: "Warning", status: "Needs review", icon: icons.value.warning, title: "Review needed", description: "Two items need attention before release.", action: "Review items" },
+  { role: "error", label: "Error", status: "Failed", icon: icons.value.error, title: "Upload failed", description: "Your file is safe. Try uploading it again.", action: "View issue" },
+] as const);
+function preview(status: typeof statuses.value[number]) {
+  toast.add({ closeIcon: icons.value.close, id: "semantic-preview", color: status.role, icon: status.icon, title: status.title, description: status.description, duration: 8000 });
 }
 </script>
 <template>

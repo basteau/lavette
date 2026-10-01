@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { iconPresets, type IconSet } from "./icons";
 import { useHashTarget } from "./hash";
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
+const props = defineProps<{ iconSet: IconSet }>();
+const icons = computed(() => iconPresets[props.iconSet].icons);
 useHashTarget();
 // Both panels share one state, so a change in either mode shows up in the other.
 const state = reactive({ query: "", notify: true, published: false, level: 64 });
@@ -35,14 +38,14 @@ const panes = [
         </div>
         <UInput
           v-model="state.query"
-          icon="i-lucide-search"
+          :icon="icons.search"
           placeholder="Search drafts"
           :aria-label="`Search drafts, ${pane.label.toLowerCase()}`"
           class="w-full"
         />
         <div class="flex flex-wrap gap-2">
           <UButton
-            :icon="state.published ? 'i-lucide-check' : undefined"
+            :icon="state.published ? icons.check : undefined"
             @click="state.published = !state.published"
             >{{ state.published ? "Published" : "Publish" }}</UButton
           ><UButton color="secondary" variant="soft">Preview</UButton
@@ -60,7 +63,7 @@ const panes = [
           </div>
           <USlider v-model="state.level" :aria-label="`Audience reached, ${pane.label.toLowerCase()}`" />
         </div>
-        <UAlert color="error" variant="soft" icon="i-lucide-image-off" title="One image failed to upload" />
+        <UAlert color="error" variant="soft" :icon="icons.imageOff" title="One image failed to upload" />
       </div>
     </div>
   </section>

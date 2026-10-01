@@ -4,12 +4,15 @@ import { generatePalette, randomValues, normalize } from "./palette";
 import { themeStyles, fontStyles, corePaletteColors, focusStyles, exportCSS, format } from "./theme";
 import { loadFontPairing, fontPairing } from "./fonts";
 import { useCollection } from "./collection";
+import { previewIconProps } from "./icons";
+import { exportUiConfig } from "./ui-config";
 import DesignControls from "./DesignControls.vue";
 import ThemeArt from "./ThemeArt.vue";
 import { useToast } from "@nuxt/ui/composables/useToast";
 const Showcase = defineAsyncComponent(() => import("./Showcase.vue"));
 const HowItWorks = defineAsyncComponent(() => import("./HowItWorks.vue"));
 const ModeCompare = defineAsyncComponent(() => import("./ModeCompare.vue"));
+const IconSetup = defineAsyncComponent(() => import("./IconSetup.vue"));
 const InstallGuide = defineAsyncComponent(() => import("./InstallGuide.vue"));
 const draftKey = "lavette-draft-v1";
 const values = ref(normalize({}));
@@ -21,6 +24,7 @@ watch(values, value => {
   try { localStorage.setItem(draftKey, JSON.stringify(value)); } catch { /* Collection saves report storage errors. */ }
 }, { deep: true });
 const palette = computed(() => generatePalette(values.value));
+const iconDefaults = computed(() => previewIconProps(values.value.iconSet));
 const dark = ref(false);
 const settings = ref(false);
 const collection = ref(false);
@@ -84,6 +88,9 @@ function downloadFile(content: BlobPart, filename: string, type = "text/plain") 
 // Opens the collection when the theme is already saved or there is no room for it.
 function save() {
   if (!saveTheme()) collection.value = true;
+}
+function downloadIcons() {
+  downloadFile(exportUiConfig(values.value), "lavette-ui.config.ts", "text/typescript");
 }
 function download() {
   downloadFile(exportCSS(palette.value), "lavette-theme.css", "text/css");
@@ -226,14 +233,16 @@ function download() {
           </div>
         </section>
         <HowItWorks :palette="palette" />
-        <ModeCompare />
-        <Showcase
-          :palette="palette"
-          :dark="dark"
-          @copy="copy"
-          @export="exportOpen = true"
-        />
-        <InstallGuide :palette="palette" @copy="copy" @download="download" />
+        <UTheme :props="iconDefaults">
+          <ModeCompare :icon-set="values.iconSet" />
+          <Showcase
+            :palette="palette"
+            :dark="dark"
+            @copy="copy"
+            @export="exportOpen = true"
+          />
+        </UTheme>
+        <InstallGuide :palette="palette" @copy="copy" @download="download" @download-icons="downloadIcons" />
         <footer class="page-footer">
           <span class="wordmark">lavette</span>
           <p>
@@ -328,6 +337,10 @@ function download() {
 @import "@nuxt/ui";
 @import "./lavette-theme.css";</pre>
           <p class="text-sm text-muted">Fonts load from Google. Fallback fonts are used if Google is unavailable.</p>
+          <details class="control-details">
+            <summary>Install the selected icons</summary>
+            <IconSetup class="pt-4" :icon-set="values.iconSet" @copy="copy" @download="downloadIcons" />
+          </details>
         </div>
       </template>
       <template #footer>

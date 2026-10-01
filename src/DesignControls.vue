@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { formatHex } from 'culori';
 import { normalize, parseBrandColor, type PaletteValues } from './palette';
 import { FONT_PAIRINGS, fontPairing } from './fonts';
+import { ICON_SETS, iconPresets } from './icons';
 import ControlSlider from './ControlSlider.vue';
 const values = defineModel<PaletteValues>({ required: true });
 const props = defineProps<{ brandShade: number | null }>();
@@ -94,10 +95,19 @@ const brandHelp = computed(() => {
       </div>
     </fieldset>
     <fieldset class="control-group">
-      <legend class="eyebrow">Type and shape</legend>
+      <legend class="eyebrow">Type, icons and shape</legend>
       <div class="control-group-body">
         <UFormField label="Font pairing" :description="`${pairing.serif} + ${pairing.sans}`">
           <USelect :model-value="values.fontPairing" @update:model-value="update('fontPairing', $event)" :items="FONT_PAIRINGS.map(p => ({ label: p.name, value: String(p.id) }))" class="w-full" />
+        </UFormField>
+        <UFormField label="Icon library">
+          <USelect :model-value="values.iconSet" @update:model-value="update('iconSet', $event)" :items="[...ICON_SETS]" class="w-full">
+            <template #item-trailing="{ item }">
+              <span class="flex gap-2" aria-hidden="true">
+                <UIcon v-for="role in (['home', 'search', 'settings'] as const)" :key="role" :name="iconPresets[item.value].icons[role]" class="size-4" />
+              </span>
+            </template>
+          </USelect>
         </UFormField>
         <ControlSlider label="Corner radius" :value="`${values.radius}rem`" :model-value="values.radius" @update:model-value="update('radius', $event)" :max="0.5" :step="0.025" />
       </div>

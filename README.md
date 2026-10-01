@@ -1,7 +1,7 @@
 # Lavette
 
 Lavette is a browser-based OKLCH theme studio for Nuxt UI 4 and Tailwind CSS 4.
-Adjust colors and font pairings, preview real components in light and dark mode,
+Adjust colors, font pairings, and icon libraries, preview real components in light and dark mode,
 and export a theme for your app. Saved themes stay in your browser's local
 storage. There is no backend.
 
@@ -38,6 +38,47 @@ Toggle `.dark` on `<html>` for dark mode (Nuxt Color Mode does this). Fonts load
 from Google; with a Content Security Policy, allow `https://fonts.gstatic.com`
 in `font-src`. For display headings, use
 `font-display font-normal leading-display tracking-normal`.
+
+### Icons
+
+Choose Lucide, Tabler Outline, or Heroicons Outline in the studio. Under **Install**
+or **Export theme → Install the selected icons**, download `lavette-ui.config.ts`
+to your project root and install the matching collection:
+
+```sh
+pnpm add @iconify-json/lucide
+# Or @iconify-json/tabler or @iconify-json/heroicons.
+```
+
+For Nuxt 4, merge these entries into the existing files:
+
+```ts
+// app/app.config.ts
+import { uiTheme } from '../lavette-ui.config';
+export default defineAppConfig({ ui: uiTheme });
+```
+
+```ts
+// nuxt.config.ts
+import { iconBundle } from './lavette-ui.config';
+export default defineNuxtConfig({
+  icon: { clientBundle: { icons: iconBundle } },
+});
+```
+
+For Vue/Vite, use the exports in your existing Nuxt UI plugin registration:
+
+```ts
+import ui from '@nuxt/ui/vite';
+import { uiTheme, iconBundle } from './lavette-ui.config';
+ui({ ui: uiTheme, icon: { clientBundle: { icons: iconBundle } } });
+```
+
+Preserve unrelated configuration and component overrides. Append `iconBundle` to
+any existing bundle list. These icons render locally, without remote requests.
+Explicit icon names in your existing components remain unchanged. CSS alone
+does not select an icon library. The generated map provides role completion
+through `uiTheme.icons.search`; arbitrary icon strings remain ordinary strings.
 
 The [theme reference](docs/theme-reference.md) explains how colors are generated
 and checked.

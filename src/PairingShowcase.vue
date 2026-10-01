@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { iconPresets, type IconSet } from "./icons";
 import { computed, ref } from "vue";
 import ThemeArt from "./ThemeArt.vue";
+const props = defineProps<{ iconSet: IconSet }>();
+const icons = computed(() => iconPresets[props.iconSet].icons);
 const range = ref("30d");
 const series = {
   "7d": { members: [42, 48, 45, 58, 62, 60, 71], visitors: [70, 66, 78, 74, 86, 90, 88] },
@@ -151,7 +154,7 @@ const pairs = ref({ switch: true, check: true, slider: 62 });
                 <p class="text-sm text-muted truncate">Marin Ose · Harbour Sessions</p>
               </div>
               <UButton
-                icon="i-lucide-heart"
+                :icon="icons.heart"
                 :color="liked ? 'secondary' : 'neutral'"
                 :variant="liked ? 'soft' : 'ghost'"
                 :aria-label="liked ? 'Remove from favorites' : 'Add to favorites'"
@@ -171,24 +174,24 @@ const pairs = ref({ switch: true, check: true, slider: 62 });
         </div>
         <div class="flex items-center justify-center gap-2 mt-4">
           <UButton
-            icon="i-lucide-shuffle"
+            :icon="icons.shuffle"
             :color="shuffle ? 'secondary' : 'neutral'"
             :variant="shuffle ? 'soft' : 'ghost'"
             aria-label="Shuffle"
             :aria-pressed="shuffle"
             @click="shuffle = !shuffle"
           />
-          <UButton icon="i-lucide-skip-back" color="neutral" variant="ghost" aria-label="Restart track" @click="position = 0" />
+          <UButton :icon="icons.skipBack" color="neutral" variant="ghost" aria-label="Restart track" @click="position = 0" />
           <UButton
-            :icon="playing ? 'i-lucide-pause' : 'i-lucide-play'"
+            :icon="playing ? icons.pause : icons.play"
             size="xl"
             class="rounded-full"
             :aria-label="playing ? 'Pause' : 'Play'"
             @click="playing = !playing"
           />
-          <UButton icon="i-lucide-skip-forward" color="neutral" variant="ghost" aria-label="Skip to end" @click="position = 100" />
+          <UButton :icon="icons.skipForward" color="neutral" variant="ghost" aria-label="Skip to end" @click="position = 100" />
           <UButton
-            icon="i-lucide-repeat"
+            :icon="icons.repeat"
             :color="repeat ? 'secondary' : 'neutral'"
             :variant="repeat ? 'soft' : 'ghost'"
             aria-label="Repeat"
